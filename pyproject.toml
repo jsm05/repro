@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "repro"
+version = "0.1.0"
+description = "Agent that turns a GitHub issue into a test that fails on the bug and passes on the fix"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic>=2.5",
+  "pyyaml>=6.0",
+  "click>=8.1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",
+  "ruff>=0.5",
+  "mypy>=1.10",
+  "types-PyYAML",
+  "actionlint-py",
+]
+
+[project.scripts]
+repro = "repro.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+repro = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra -q -p no:cacheprovider"
+markers = [
+  "docker: needs a Docker daemon (runs in docker-tests.yml)",
+  "live_llm: calls real free-tier APIs (runs in live-smoke.yml)",
+  "slow: slow test",
+]
+norecursedirs = ["fixtures", ".git", "eval"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["tests/fixtures"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.mypy]
+strict = true
+python_version = "3.11"
+plugins = ["pydantic.mypy"]
+exclude = ["tests/fixtures/"]
