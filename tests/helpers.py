@@ -82,3 +82,30 @@ def wait_dead(pid: int, within_s: float = 1.0) -> bool:
 
 def proc_supported() -> bool:
     return os.path.isdir("/proc/self")
+
+
+def new_file_diff(path: str, text: str) -> str:
+    """Git-style diff that creates `path` with `text` (independent of repro's own diff code)."""
+    text = textwrap.dedent(text).lstrip("\n")
+    lines = text.splitlines()
+    body = "".join(f"+{line}\n" for line in lines)
+    return (
+        f"diff --git a/{path} b/{path}\nnew file mode 100644\n--- /dev/null\n+++ b/{path}\n"
+        f"@@ -0,0 +1,{len(lines)} @@\n{body}"
+    )
+
+
+def load_cheats() -> list[tuple[str, str, dict[str, object], str]]:
+    """(fixture name, cheat id, metadata, patch text) for every stored cheat."""
+    import json
+
+    out = []
+    for fx in FIXTURE_NAMES:
+        cheat_dir = FIXTURES_ROOT / fx / "cheats"
+        if not cheat_dir.is_dir():
+            continue
+        for meta_path in sorted(cheat_dir.glob("*.json")):
+            meta = json.loads(meta_path.read_text())
+            patch = meta_path.with_suffix(".patch").read_text()
+            out.append((fx, str(meta["id"]), meta, patch))
+    return out
