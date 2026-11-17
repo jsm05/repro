@@ -96,7 +96,7 @@ After each session, my own part: read the code, and be able to answer the "expla
 - [x] `repro fixtures check` prints F→P for all 8 fixtures
 - [x] Sandbox contract tests (T1.x) pass on `LocalSandbox`
 - [x] A timeout kills the whole process tree within 2 s of the limit
-- [ ] CI is green on the first push
+- [x] CI is green on the first push
 - [x] `bootstrap.yml` passes `actionlint` (it first runs for real in E0)
 
 **Explain it:** Why is `AgentView` a separate type instead of a flag? What does the runner count as "failed" and why are errors excluded? What can `LocalSandbox` not protect against?
@@ -165,10 +165,10 @@ gh repo edit jsm05/repro --visibility public --accept-visibility-change-conseque
 **Not in M2:** the LLM judge (M7 ablation), Docker.
 
 **Done when**
-- [ ] All 8 gold tests pass G0 to G5 and the oracle
-- [ ] Every cheat in TEST_SPEC T2.A is rejected by the check named there
-- [ ] The two oracle-only cases (T2.B) pass the gate and are caught by the oracle, and the test says so explicitly
-- [ ] Verification provably never touches the workspace it was given (T2.9)
+- [x] All 8 gold tests pass G0 to G5 and the oracle
+- [x] Every cheat in TEST_SPEC T2.A is rejected by the check named there
+- [x] The two oracle-only cases (T2.B) pass the gate and are caught by the oracle, and the test says so explicitly
+- [x] Verification provably never touches the workspace it was given (T2.9)
 
 **Explain it:** Walk through G0 to G5 from memory. Which cheats can only the oracle catch, and what metric does that create? Why additions-only?
 

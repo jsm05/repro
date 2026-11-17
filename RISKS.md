@@ -72,4 +72,5 @@ L = likelihood, I = impact (H / M / L).
 - A provider changing behaviour under a fixed model ID.
 - Benchmark label errors in SWT-bench Verified itself (counted against Repro like any other failure).
 - Low-rate flakiness below what 10 reruns can detect (EVAL H4 power table).
+- A test written to forge the runner's report. The report comes from a pytest plugin in the same process as the test, and the gate and the oracle both use it, so deliberately malicious test code could fake outcomes for both (DECISIONS D-M1-1). Candidates are model-written tests, not adversarial programs, and the tracer, tree hash and oracle make accidental fakes visible.
 - A free tier vanishing entirely during the project with no replacement (the project then reports whatever finished, on one model, and says so).

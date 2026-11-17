@@ -27,3 +27,29 @@ A path is a test path if any directory is named `tests`, `test` or `testing`, or
 
 **D-M1-8. bootstrap.yml details.**
 SWT-bench harness pinned to commit `be12d4c8e7a5315a6bd60b0cad72736e96a4af3e`. The gold check uses the README's own command (no `--dataset_name`). Verified ids come from `nmuendler/SWT-Bench_Verified_bm25_27k_zsp` (largest split; split names and columns recorded in box notes). The workflow commits its outputs as `github-actions[bot]`, since it is an automated commit, not one I wrote.
+
+## 2026-11-17, M2
+
+**D-M2-1. Assertion failures are signed by where they failed, not by their message.**
+DESIGN 5.4 defines the signature as (type, masked message, innermost repo frame). For an `AssertionError` (or pytest's `Failed`) the signature is now (type, file:line of the failing assertion). Why: pytest prints the actual values, and for sets and dicts their order legitimately changes with the hash seed. The f04 gold test failed at the same line under seeds 0, 1 and 2, but with three different messages, so G4 rejected a correct reproduction. Other exceptions keep (phase, type, masked message, innermost frame path:function).
+
+**D-M2-2. How "additions only" is enforced.**
+G0 reads the pristine file. In an existing test file, every hunk must contain only context lines followed by added lines, and must end at the old end of file. One exception: a file without a final newline, where git rewrites the last line. Every candidate test id must name a `def` that the diff itself adds.
+
+**D-M2-3. G1 also rejects tests that were skipped, xfailed, xpassed or errored in setup.**
+They "did not run cleanly". G2 rejects if any candidate test times out, even when another one fails.
+
+**D-M2-4. G3 and G5 apply to every failing candidate test, not just one.**
+A candidate with one real reproduction and one broken test would fail O1 anyway. Rejecting it at the gate gives the agent feedback earlier.
+
+**D-M2-5. Gate run layout.**
+Three fresh sandboxes with seeds 0, 1, 2. Run 0 doubles as the G1 to G3 run, and all three runs happen once G3 passes, so the gate uses three sandboxes per candidate. G5 is judged after G4, so a seed-dependent test is reported as G4. The tracer records the first call into any function in a non-test repo file during the call phase. Module-level code and pseudo-files like `<frozen os>` do not count. If the tracer produced no data, G5 fails closed.
+
+**D-M2-6. "Imports nothing outside the stdlib" (T2.16) means stdlib plus pytest.**
+The tracer is a pytest plugin, and pytest is always present where it runs.
+
+**D-M2-7. Oracle details.**
+One "before" run on the buggy code with the candidate (seed 0), then three "after" runs in fresh sandboxes with the fix (seeds 0, 1, 2), each over the whole files the candidate touches. A transition shows `~` when the after-runs disagree, and that test goes on the flaky list. E→P is not a reproduction. Collateral (O2) means any other test in a touched file that is FAILED, ERROR or TIMEOUT in any after-run.
+
+**D-M2-8. Cheat storage and C15.**
+Each cheat is stored as `cheats/<ID>.patch` plus `cheats/<ID>.json` (description, expected check, test ids) inside its fixture. C15 swaps the function under test for a fake that raises `AssertionError`. G3 accepts that (it looks like a test assertion), and the G5 tracer catches it because no repo function ran, matching the check TEST_SPEC names.
