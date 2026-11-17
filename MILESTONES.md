@@ -42,12 +42,13 @@ Kickoff prompt (copy, change the number):
 ```
 Project: Repro, milestone M<k>.
 Clone github.com/jsm05/repro. Read DESIGN.md, then the M<k> sections of MILESTONES.md and TEST_SPEC.md. Read DECISIONS.md (if it exists) for anything that changed since the plan.
-Build M<k> only. Write the M<k> tests from TEST_SPEC.md first, then the code. Do not start the next milestone.
+Build at most 2 milestones this session, starting at M<k>. Do not start a third. Write each milestone's tests from TEST_SPEC.md first, then the code.
 If something in the plan looks wrong, stop and ask me before changing it.
 Before finishing: run the full test suite, ruff and mypy. Append any deviation from DESIGN.md to DECISIONS.md. Tick the done criteria in MILESTONES.md.
-Commit as me (Jashan Singh Mehta), with no Co-Authored-By or Claude-Session lines. Push to main.
+Commit with: git -c commit.gpgsign=false commit --author="Jashan Singh Mehta <71641689+jsm05@users.noreply.github.com>" (set user.name and user.email to the same so the committer matches). One commit per logical step (tests, implementation, docs). No Co-Authored-By or Claude-Session lines. Real timestamps only.
+If main was rewritten since your last fetch, rebase unpushed work onto origin/main; never force-push old history. Push to main.
 If this milestone has an Actions step, start it with the GitHub REST API and report the result, or tell me the exact gh command if you can't.
-End by telling me: what you built, what deviates from the plan, and what I need to do, if anything.
+End the session with a study list: the "Explain it" points for each milestone built, plus the key files to read. Also tell me what deviates from the plan and what I need to do, if anything.
 ```
 
 Definition of done for every milestone:
