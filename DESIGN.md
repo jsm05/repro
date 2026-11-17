@@ -1,6 +1,6 @@
 # Repro: Design
 
-Status: planning complete (2026-11-16). No implementation code yet.
+Status: planning complete. Revision 2 (2026-11-17): the project now runs at $0. It uses free LLM API tiers behind one router and free GitHub Actions compute. No implementation code yet.
 Companion docs: [MILESTONES.md](MILESTONES.md), [TEST_SPEC.md](TEST_SPEC.md), [EVAL_AND_METRICS.md](EVAL_AND_METRICS.md), [RISKS.md](RISKS.md).
 
 ## 1. What Repro is
@@ -12,13 +12,13 @@ Repro takes a bug report (a GitHub issue) and a repository, and writes a test th
 
 It automates the test-first habit: before touching a fix, pin the bug down with a failing test.
 
-One sentence for interviews: "Repro is a small agent plus a verification harness that turns a bug report into a failing test you can trust, and I can tell you exactly how often it is right and what each one costs."
+One sentence for interviews: "Repro is a small agent plus a verification harness that turns a bug report into a failing test you can trust. It runs entirely on free model tiers, and I can tell you exactly how often it is right and how many tokens each test takes."
 
 ### What it is not
 
 - It does not fix bugs.
 - It is Python-only (pytest and the test runners SWE-bench already supports).
-- It is not trying to top a leaderboard. General coding agents already score about 76 to 88% on SWT-bench Verified (see EVAL_AND_METRICS.md section 7). Repro's value is a harness I fully understand, with measured trust properties the leaderboard does not report: cost per bug, how often "reproduced" is actually true, flaky rate, and test strength.
+- It is not trying to top a leaderboard. Frontier coding agents already score about 76 to 92% on SWT-bench Verified (EVAL_AND_METRICS.md section 7). Repro runs on free-tier models, so its raw score will be lower. Its value is a harness I fully understand, with measured trust properties the leaderboard does not report: how often "reproduced" is actually true, tokens per bug, flaky rate, and test strength.
 
 ## 2. Product layer
 
@@ -38,40 +38,54 @@ One sentence for interviews: "Repro is a small agent plus a verification harness
 |---|---|---|
 | North star: reproductions accepted (test merged) per week | Only merged tests create value | Success rate S on SWT-bench Verified |
 | Guardrail: precision of "reproduced" claims | A bot that posts wrong tests gets uninstalled after the second one | Gate precision (EVAL H3) |
-| Guardrail: cost per issue | Must be far below the engineer time it replaces | Cost per bug (EVAL H2) |
+| Guardrail: compute per issue | Must be far below the engineer time it replaces | Tokens and requests per bug, plus what that would cost at paid list prices (EVAL H2) |
 | Guardrail: flaky tests shipped | A flaky test in CI is worse than no test | Flaky rate (EVAL H4) |
 | Quality: does the test pin the behaviour or just one input | Weak tests pass after a wrong fix | Mutation score vs human-written tests (EVAL H5) |
 
 ### Product tradeoffs I chose
 
 - **Abstain instead of guessing.** In product mode Repro posts nothing unless the gate passes. This costs recall and buys precision. The eval measures both sides of that trade (S always-emit vs S gated).
-- **Cheap model first.** Default is a small model with a hard per-bug ceiling. A frontier model is an ablation, not the default, because the user is cost-sensitive.
+- **Free open-weights-class model, not a frontier model.** The budget is $0, so the agent runs on free tiers. This is also a product argument: if the harness gets trustworthy tests out of a free model, a team can run it without a model bill. If they want a higher hit rate, a stronger model slots in through the same router.
+- **Free tiers are for public code only.** The free tiers used here may train on prompts (section 5.5). That is fine for open-source benchmark repos. It is not fine for a customer's private code, so product mode on private repos needs a paid no-training tier or a self-hosted open model. The router makes that a config change, not a rewrite.
 - **Unit-test mode, not standalone scripts.** The output is a test in the project's own test framework that can be committed. Standalone reproduction scripts are easier to generate (leaderboard entries that use them are marked separately) but are not what a team merges.
 - **Environment setup is the adoption barrier, and I do not solve it in v1.** On SWE-bench someone has already built a Docker image per bug. On a real repo the user must give Repro an image and a test command (`.repro.yml`). v2 would reuse the repo's existing CI container.
 
 ## 3. Constraints that shape the design
 
-These were checked on 2026-11-16, not assumed.
+Checked on 2026-11-16 and 2026-11-17, not assumed.
 
-1. **Build sessions happen in Claude chat.** That workspace has Python and pip, but no Docker daemon, and cannot reach Docker Hub, GHCR, or Hugging Face. So everything must be buildable and testable without Docker, without real LLM calls, and without SWE-bench data.
-2. **Real runs happen on an "eval box"**: an x86_64 Linux machine with Docker. The SWT-bench harness asks for about 120 GB free disk, 16 GB RAM, 8 cores. Default plan is a rented cloud VM for the eval window.
-3. **Money is real.** LLM spend is hard-capped (section 8).
-4. **The fix does not exist at product time.** The issue arrives before the fix. So "fail before, pass after" splits into two halves (section 6): a gate that needs no fix, and an oracle that does.
+1. **Budget is $0 beyond a Claude subscription.** No paid model API, no paid VM. Every paid dependency in revision 1 was swapped for a free one:
+
+   | Need | Revision 1 | Revision 2 |
+   |---|---|---|
+   | Model | Anthropic API, about $70 | Free tiers (Mistral, Gemini, OpenRouter) behind one router |
+   | Eval compute | Rented VM, about $12 | GitHub Actions standard runners (free and unlimited on public repos) |
+   | Image pulls | n/a | Free Docker Hub account (higher anonymous pull limits) |
+
+2. **Free tiers are rate-limited, unstable, and change without notice.** Limits differ per provider and per model. Some are daily, one is monthly, and they reset at different times. Some are not even published. The design treats limits as data loaded from config and observed at runtime, never as constants in code.
+3. **Build sessions happen in Claude chat.** That workspace has Python and pip but no Docker daemon. It cannot reach Docker Hub, GHCR, or Hugging Face, and probably cannot reach the model APIs either. So everything must be buildable and testable without Docker, real model calls, or SWE-bench data.
+4. **Real runs happen in GitHub Actions.** Public repos get free, unlimited standard runners: 4 vCPU, 16 GB RAM, 14 GB SSD, 6 hours per job, up to 20 concurrent jobs. A chat session can trigger them through the GitHub REST API and read results back from the repo. Running the same commands on my own machine overnight is the fallback.
+5. **The fix does not exist at product time.** The issue arrives before the fix. So "fail before, pass after" splits into two halves (section 5.4): a gate that needs no fix, and an oracle that does.
 
 Consequence: every external dependency sits behind an interface with a fake.
 
 | Dependency | Interface | Real | Fake used in chat sessions |
 |---|---|---|---|
 | Code execution | `Sandbox` | `DockerSandbox` | `LocalSandbox` (subprocess + rlimits, fixture repos only) |
-| Model | `LLMClient` | `AnthropicClient` | `FakeLLM` (scripted) and `CassetteLLM` (record/replay) |
+| Model | `ChatModel` (via `Router`) | `OpenAICompatClient` per route | `FakeLLM` (scripted), `CassetteLLM` (record/replay), `FakeProvider` (simulates 429s, quotas, outages) |
 | Benchmark data | `InstanceSource` | `SWTBenchSource` | `FixtureSource` (toy repos committed in `tests/fixtures/`) |
+| Time | `Clock` | system clock | `FakeClock` (rate-limit waits and quota resets without sleeping) |
 
 ## 4. Architecture
 
 ```mermaid
 flowchart TD
     I["Issue text + repo at base commit"] --> LD["Loader: builds AgentView (safe fields only)"]
-    LD --> AG["Agent loop (budgeted)"]
+    LD --> AG["Agent loop (token budget, context trimming)"]
+    AG <--> RT["Router: free-tier routes, rate limiter, quota store, failover"]
+    RT <--> P1["Mistral"]
+    RT <--> P2["Gemini"]
+    RT <--> P3["OpenRouter :free"]
     AG <--> WS["Sandbox A: agent workspace (long-lived, dirty)"]
     AG -->|"candidate test patch"| GT["Online gate G0 to G5 (no fix needed)"]
     GT <--> PS["Sandbox B: fresh pristine checkout per run"]
@@ -90,24 +104,32 @@ Key property: the agent can do anything it likes in Sandbox A. None of it counts
 ```
 src/repro/
   models.py          Instance, AgentView, SealedView, Candidate, TestOutcome,
-                     GateVerdict, OracleVerdict, RunResult, Budget
-  cli.py             repro run | verify | eval | audit | mutate | report | show
+                     GateVerdict, OracleVerdict, RunResult, TokenBudget
+  cli.py             repro run | verify | eval | status | audit | mutate | report | show | fixtures | llm
   config.py          typed config, config hash
   datasets/          fixtures.py, swtbench.py, samples.py
   sandbox/           base.py (protocol), local.py, docker.py, limits.py
   runner/            test command building, outcome parsing (JUnit XML, swebench log parsers)
   gate/              scope.py (G0), checks.py (G1 to G5), signature.py, judge.py
   oracle/            oracle.py
-  llm/               client.py (protocol), anthropic_client.py, fake.py, cassette.py,
-                     pricing.py, ledger.py
-  agent/             loop.py, tools.py, prompts.py, stops.py, context.py
+  llm/               client.py (OpenAICompatClient), registry.py (routes, logical models),
+                     router.py (failover policies), limiter.py (token buckets),
+                     quota.py (persisted daily/monthly counters), errors.py (classifier),
+                     tokens.py (estimator + correction), budget.py (token ledger),
+                     fake.py, cassette.py, list_prices.yaml
+  agent/             loop.py, protocol.py (text action format), tools.py, prompts.py,
+                     stops.py, context.py (trimming + state card)
   baseline/          retrieval.py (BM25), single_prompt.py (B0), pass_at_k.py (B1)
   mutation/          operators.py, generate.py, score.py
-  eval/              run.py, export.py, audit.py, metrics.py, report.py
+  eval/              run.py (batches, shards, deferral), export.py, audit.py, metrics.py, report.py
+config/
+  routes.yaml        providers, base URLs, models, published limits, reset rules
 tests/
   unit/  contract/  adversarial/  e2e/  fixtures/mini_repos/
 eval/
-  configs/  samples/  results/  cassettes/
+  configs/  samples/  cassettes/
+.github/workflows/
+  ci.yml  bootstrap.yml  live-smoke.yml  docker-tests.yml  eval.yml  official-score.yml
 ```
 
 Host package targets Python 3.11+. Code inside benchmark containers runs on whatever old Python that repo needs (3.6 to 3.9 is common), so anything Repro injects into a container must be stdlib-only and old-syntax safe.
@@ -125,6 +147,7 @@ Instance
 - The agent, the baselines, the prompts, and the gate only ever receive `AgentView`. This is enforced by types (functions take `AgentView`, not `Instance`) and by a canary test that scans every prompt and trace for sealed content.
 - `hints_text` (later issue comments) is sealed too. It can contain the fix discussion.
 - Only the oracle, mutation scorer, and audit receive `SealedView`.
+- With free tiers this separation matters twice: prompts may be retained by the provider, so nothing sealed may ever be sent, even by accident.
 
 ### 5.2 Sandbox
 
@@ -136,24 +159,25 @@ Protocol: `start()`, `exec(cmd, timeout_s) -> ExecResult`, `put_file`, `get_file
 |---|---|---|
 | Network | `--network none` | No fetching the fix, no exfiltration, removes a flakiness source |
 | Memory | `--memory 4g --memory-swap 4g` | Kill runaway tests, no swap thrash |
-| CPU | `--cpus 2` | Fair sharing across 4 workers on 8 cores |
+| CPU | `--cpus 2` | Fits two containers on a 4-vCPU Actions runner |
 | PIDs | `--pids-limit 512` | Fork bombs |
 | Privileges | `--cap-drop ALL --security-opt no-new-privileges` | Shrink attack surface |
-| Mounts | none from host, no Docker socket | The container cannot see the host or the API key |
+| Mounts | none from host, no Docker socket | The container cannot see the host or the API keys |
 | Lifetime | new container per verification run, removed after | No state carries between runs |
 | Per-command timeout | 60 s shell, 180 s test run | In-container `timeout -s KILL` plus a host watchdog that kills the container |
-| Per-instance wall clock | 20 min | Hard stop |
+| Per-instance wall clock | 25 min of active time, plus a 60 min hard cap including rate-limit waits | Hard stop. Waiting on a provider's limits does not eat the agent's budget, so a congested provider cannot lower S. |
 | Output cap | 16 KB per command, head and tail kept | Protects the context budget |
 | Cleanup | every container labelled `repro.run_id`; a reaper removes leftovers at start and exit | No leaked containers after a crash |
+| Disk | after each instance, remove its image and run `docker system prune` | Actions runners have about 14 GB of SSD (more after freeing preinstalled tools) |
 
 Implementation choice: drive the `docker` CLI through `subprocess` instead of the Docker SDK. Fewer dependencies, and every action is a command I can copy and rerun by hand when debugging. Cost: I parse CLI output and manage timeouts myself.
 
-Threat model: the repo's code and the model's commands are untrusted. Docker with the settings above is the boundary. This does not defend against container-escape kernel bugs. That is acceptable for benchmark repos on a throwaway VM. A public GitHub App running strangers' code would need gVisor or Firecracker (RISKS R10).
+Threat model: the repo's code and the model's commands are untrusted. Docker with the settings above is the boundary, on an ephemeral Actions VM that is destroyed after each job. This does not defend against container-escape kernel bugs. That is acceptable for benchmark repos on a throwaway VM. A public GitHub App running strangers' code would need gVisor or Firecracker (RISKS R20).
 
 Leakage hardening at container start (before the agent's first step):
 - Replace `.git` with a fresh single-commit repo at the base commit, so no future commit containing the fix is reachable.
 - Confirm no network.
-- The LLM API key lives on the host only. LLM calls are made by the host process, never from inside a container.
+- API keys live in the host process environment only. Model calls are made by the host process, never from inside a container.
 
 `LocalSandbox` runs fixture repos in a temp dir with `resource.setrlimit` and a process-group kill on timeout. It exists so the whole pipeline is testable in chat. It is never used on untrusted code.
 
@@ -200,14 +224,88 @@ Per-test transitions are recorded (F→P, F→F, P→P, P→F, E→x). An instan
 
 **What the online gate cannot catch, stated plainly:** a test that fails on the bug for a plausible reason but asserts the wrong expected behaviour will still fail after the fix (F→F). Only the oracle sees that. This is exactly what gate precision (EVAL H3) measures. It is a number I report, not a hole I hide.
 
-### 5.5 LLM layer and budget
+### 5.5 LLM layer: one client, many free routes
 
-- `LLMClient.complete(messages, tools, max_tokens) -> Response` with token usage. One real implementation (Anthropic). The protocol keeps other providers possible without building them.
-- `pricing.yaml` pins price per model with a `verified_on` date. Prices as reported in Nov 2026: Haiku 5.5 at $0.10 in / $0.50 out per million tokens for prompts up to 100K tokens, 5x above that; Sonnet 5.5 at $2 / $10. These get re-checked against Anthropic's pricing page in M3 before any paid run.
-- **Ledger.** Append-only JSONL with a file lock. Every call records tokens and cost.
-- **Ceilings are pre-emptive.** Before each call: `spent + worst_case(prompt_tokens, max_tokens) <= ceiling`, else refuse. So a ceiling is never exceeded, as opposed to "stop after going over". Same check at run level (the global cap).
-- **Context cap of 90K prompt tokens** to stay under Haiku 5.5's 100K price tier. Enforced by truncating tool outputs and dropping the oldest tool results first. The issue text and the latest gate verdict are never dropped.
-- **Cassettes.** `CassetteLLM` records real responses keyed by request hash and replays them. Traces recorded on the eval box can be replayed in a chat session with no API access, which is how failures get debugged later.
+This replaces revision 1's single Anthropic client and dollar ledger.
+
+#### Providers (as checked 2026-11-17; M3 re-checks each on the live Limits pages before any run)
+
+| Provider | Free terms | Limits as reported | Role |
+|---|---|---|---|
+| Mistral (free mode, formerly "Experiment") | No card. May train on prompts by default; an opt-out toggle exists in the admin panel. | 1 request/s, 500K tokens/min, 1B tokens/month (Mistral help centre). Per-model. | **Primary.** The only tier with enough volume to carry the eval alone. |
+| Google Gemini API (AI Studio free tier) | No card. Free-tier prompts may be used to improve Google products. | Google no longer publishes free limits; they are shown per project in AI Studio. Third-party reports range from 20 requests/day on the newest Flash to several hundred on Flash-Lite. Daily reset at midnight Pacific. | Secondary fallback and an optional cross-model ablation. Low volume. |
+| OpenRouter `:free` models | No card. | 20 requests/min and **50 requests/day for the whole account** (1,000/day only after a one-time $10 purchase). The free model list changes often. | Last-resort fallback. About one agent run per day at most. |
+| Cerebras | **No permanent free tier** per Cerebras's own docs. Free Trial needs a verified payment method, gives $5 of credit, expires in 30 days. | Trial: `gpt-oss-120b` at 5 requests/min, 1M tokens/day. | Supported by the client but **off by default**. Turn it on only if I add a card for the trial. |
+
+Takeaway: Mistral carries the eval. The others add resilience for dev and demo runs, and give a second model for an optional comparison. Capacity check against Mistral alone: the whole plan needs about 80M tokens (section 8), which is about 8% of one month's 1B. The binding limit is 500K tokens/min, which allows about 15 agent calls/min at 32K-token prompts. That is enough for 6 parallel workers. The real bottleneck is Docker time, not tokens.
+
+#### Logical models and routes
+
+- A **route** is one (provider, exact model version string, base URL, API key env var) with its limits, capabilities (context window, max output, system-role support), and reset rules. Routes live in `config/routes.yaml`, not in code.
+- A **logical model** is a name the configs use (for example `primary`). It maps to one or more routes **that serve the same model weights and version**, for example a Mistral open-weights model served by Mistral and also by OpenRouter.
+- Exact version strings are pinned. `-latest` aliases are refused for eval configs, because they can change under a running eval.
+- The primary model is chosen in M3 from what Mistral's free mode actually lists. Preference order: Mistral's agentic coding model (Devstral family), then Mistral Medium, then Mistral Small. The choice and its exact ID go into `DECISIONS.md`.
+
+#### One client
+
+`OpenAICompatClient` is the official `openai` Python SDK pointed at each route's base URL, with the SDK's own retries turned off (`max_retries=0`) so the router owns every retry decision. It reads raw response headers for rate-limit information. Every provider above exposes an OpenAI-compatible chat completions endpoint; base URLs are in `routes.yaml` and re-checked in M3.
+
+Per-route quirks (no system role, no stop sequences, a different max-tokens field) are handled by small capability flags on the route, not by provider-specific client classes.
+
+#### Agent action format: text protocol, not native tool calling
+
+Each model reply must contain exactly one fenced action block:
+
+````
+```action
+{"tool": "bash", "args": {"cmd": "grep -rn parse_date src/"}}
+```
+````
+
+Free routes differ in whether and how they support native tool calling, especially `:free` models. A text protocol behaves the same on every route, survives a mid-run failover, and records cleanly in cassettes. Cost: models trained for native tool calling may follow it slightly less well. Mitigation: a strict parser and one repair message on a parse failure, which counts as a tool error. Native tool calling stays a possible later ablation.
+
+#### Failover policies
+
+| Policy | Used for | Behaviour |
+|---|---|---|
+| `pinned` | All headline eval configs | Only routes of the same logical model. Transient error: back off and retry, then try the next same-model route. Quota exhausted on every route: wait if the reset is under 10 minutes, otherwise **defer** the instance (section 5.9). Never switches to a different model. |
+| `chain` | Dev runs, demo, product mode | Ordered list across models, default Mistral → Gemini Flash → OpenRouter `:free` (→ Cerebras if on). Switches on exhaustion or a tripped circuit breaker. A run served by more than one model is tagged `mixed`. |
+
+Every call records the route that served it. A `mixed` run is never reported as a headline number. The whole point of the eval is a paired comparison on one model, and `pinned` keeps it that way.
+
+#### Error classification
+
+| Response | Meaning | Action |
+|---|---|---|
+| 429 with a short window (per-second or per-minute) | Rate limit | Wait for `Retry-After` or the bucket refill, then retry the same route |
+| 429 or 403 naming a daily or monthly quota | Quota exhausted | Mark the route exhausted until its reset time (persisted), then fail over by policy |
+| 5xx, timeout, connection error | Provider trouble | Exponential backoff with jitter: 1, 2, 4, 8, 16 s, max 5 tries, then fail over. Three such failures in a row trip a 10-minute circuit breaker on that route. |
+| 400 "context length" | Prompt too big for this route | Trim to 75% of the route's window and retry once |
+| 400 other | Bad request (my bug) | No retry. Counted as a model error. |
+| 401 | Bad or missing key | Disable the route for the run, log loudly |
+| 200 with an empty or unparseable action | Model problem | One repair message, then counted as a tool error |
+
+Provider error bodies differ, so the classifier is table-driven: (provider, status, body pattern) → class. It is tested against recorded error samples.
+
+#### Rate limiter and quota store
+
+- Per route: token buckets for requests/s, requests/min, tokens/min, and counters for requests/day, tokens/day, and tokens/month.
+- Before each call, the limiter reserves the worst case (estimated prompt tokens + `max_tokens`). If a bucket cannot cover it, it waits when the wait is short, or reports "unavailable" to the router.
+- Daily and monthly counters are persisted to `quota_state.json`, keyed by route and window start. They survive between batches. The reset rule (UTC day, Pacific day, calendar month) comes from `routes.yaml`.
+- Where a provider reports remaining quota (OpenRouter's `X-RateLimit-*` headers and its key endpoint), the observed value overrides the local count.
+- **Shards:** parallel Actions jobs cannot share a quota file. Each of N shards gets 1/N of every limit. This is static partitioning with no coordination. It wastes some headroom but never trips a shared limit.
+
+#### Token budget (replaces the dollar ledger)
+
+- `TokenBudget` per bug: total tokens in + out, total requests, and gate checks. Checked **before** every call against the worst case, so a ceiling is never exceeded, same as revision 1's pre-emptive dollar check.
+- Run-level token ceiling as a safety net against loop bugs.
+- The ledger (append-only JSONL with a file lock) records for every call: route, tokens in and out as reported by the provider, latency, retries, and outcome.
+- **List-price equivalent:** `list_prices.yaml` holds the paid price of each model. The report shows what the run *would* have cost on a paid tier, next to the actual spend, which is $0.00. That keeps the cost story meaningful for a team that would pay.
+- **Token estimates:** providers use different tokenizers. The estimator uses `tiktoken` (`o200k_base`) times a 1.15 safety margin, then learns a per-route correction factor from provider-reported usage (a moving average, clamped to 0.8 to 1.5).
+
+#### Cassettes
+
+`CassetteLLM` records real responses keyed by request hash and replays them. Runs recorded in Actions can be replayed in a chat session with no API access. That is how failures get debugged later and how end-to-end tests stay hermetic.
 
 ### 5.6 Agent loop
 
@@ -226,30 +324,50 @@ Why a shell and not a fixed list of narrow tools: the sandbox is the security bo
 
 Intended flow (prompted, not hard-coded): locate the code and the nearest existing tests, reproduce the symptom in a quick snippet, write the test in the project's style, `check`, refine, `submit`.
 
-**Stop conditions (defaults for the Haiku config):**
+#### Context trimming
+
+Free routes have smaller effective context and tight tokens-per-minute limits, so every prompt is kept under a **32K-token cap** (configurable, and never above the smallest context window among the logical model's routes).
+
+Pinned, never dropped:
+- system prompt
+- issue text (if longer than 4K tokens: first 3K and last 1K)
+- the current candidate diff
+- the latest gate verdict
+- a **state card** (about 300 tokens) the harness rebuilds every turn: files viewed, searches run, tests written, each `check` result with its first failing G-check, and the remaining budget. The agent can therefore lose old messages without forgetting what it already tried.
+
+Trimming steps, applied in order before each call until the estimate fits:
+1. Every tool output is truncated when it enters history: 3K tokens max, first 1.5K and last 1.5K kept.
+2. Tool results older than the last 4 turns become one-line stubs, for example `[bash: pytest tests/test_dates.py, exit 1, 212 lines, elided]`.
+3. File views older than the last 2 become stubs naming the path and line range.
+4. The oldest assistant and tool turn pairs are dropped.
+
+#### Stop conditions (defaults for the primary config)
 
 | Limit | Default |
 |---|---|
 | Steps | 30 |
-| Cost per bug | $0.25 |
-| Wall clock per bug | 20 min |
+| Tokens per bug (in + out, all calls) | 600,000 |
+| Requests per bug | 40 |
+| Prompt tokens per call | 32,000 |
+| Output tokens per call | 2,000 |
+| Wall clock per bug, active time (rate-limit waits excluded) | 25 min |
+| Wall clock per bug, hard cap (waits included) | 60 min |
 | Gate checks | 8 |
-| Prompt tokens per call | 90,000 |
-| Output tokens per call | 4,000 |
-| Consecutive tool errors | 5 |
+| Consecutive tool or parse errors | 5 |
 | Same action repeated | 3 (one nudge, then stop) |
-| Run-level LLM spend | $80 |
+| Run-level tokens | 150M |
 
-**Terminal states:** `SUBMITTED` (gate passed), `ABSTAINED(reason)`, `BUDGET_EXHAUSTED(kind)`, `INFRA_ERROR`.
+**Terminal states:** `SUBMITTED` (gate passed), `ABSTAINED(reason)`, `BUDGET_EXHAUSTED(kind)`, `DEFERRED(quota)`, `INFRA_ERROR`.
 
-On any stop, the loop keeps the best candidate so far (gate passed beats gate failed beats none). One run therefore yields both eval modes at no extra cost:
+On any stop except `DEFERRED`, the loop keeps the best candidate so far (gate passed beats gate failed beats none). One run therefore yields both eval modes at no extra cost:
 - **gated**: emit the test only if the gate passed (product behaviour)
 - **always-emit**: emit the best candidate regardless (what SWT-bench scores)
 
 ### 5.7 Baselines
 
-- **B0, single prompt.** One call. Issue text plus BM25-retrieved files (about 27K tokens of context, mirroring the published Zero-Shot Plus setup). No execution. Output is a test file or an append block; the harness turns it into a diff.
+- **B0, single prompt.** One call. Issue text plus BM25-retrieved files, fitted to the same 32K prompt cap (revision 1 used about 27K tokens of context, mirroring the published Zero-Shot Plus setup; the cap keeps that roughly intact). No execution. Output is a test file or an append block; the harness turns it into a diff.
 - **B1, pass@5 with gate.** Five independent single-prompt samples; emit the first that passes the online gate. This separates "the gate helps" from "the agent loop helps".
+- Both use the same logical model and `pinned` policy as the agent, so the comparison is paired on the model too.
 
 ### 5.8 Mutation scorer
 
@@ -260,41 +378,73 @@ Purpose: fail-before/pass-after shows the test catches this bug. Mutation score 
 - Mutants are generated on the host (modern Python, format-preserving) and executed in the sandbox.
 - Killed = any generated test fails, errors, or times out. Score = killed / valid mutants.
 - Reference: the human-written gold tests scored on the **same** mutants. Reporting the paired difference cancels out equivalent mutants, which I cannot detect automatically.
-- Needs the fix, so it is an eval-time metric only.
+- Needs the fix, so it is an eval-time metric only. Uses no model calls.
 
-### 5.9 Eval runner and report
+### 5.9 Eval runner: resumable batches
 
-- Work unit = (instance, config). Results are keyed on that pair, so a killed run resumes without redoing or re-paying for finished work.
-- 4 workers by default. The global ledger cap applies across workers.
-- Exports predictions in SWT-bench format (`instance_id`, `model_name_or_path`, `model_patch`) so the official harness produces the headline S.
+The eval is built to run as many small overnight batches that can be killed at any point.
+
+- **Work unit** = (instance, config). A unit is either done (one row in `results.jsonl`) or not started. There is no partial state on disk.
+- **Resume:** on start, the runner reads existing rows and skips finished units. A killed batch loses at most the units in flight, and those are retried later. Nothing is redone that already finished.
+- **Batch controls:**
+  - `--max-units N`: stop after N units
+  - `--deadline HH:MM` or `--deadline-minutes M`: start no new unit that cannot finish before the deadline (estimated from the median unit time so far); exit cleanly
+  - `--shard k/N`: take every N-th unit (stable hash of instance id), with 1/N of each route limit
+  - `--stop-when-exhausted`: exit cleanly when the logical model has no route left with quota, instead of waiting
+- **Deferral.** If quota runs out mid-unit under the `pinned` policy, the unit ends as `DEFERRED`. Its partial work is discarded and no result row is written; the unit runs again from scratch in a later batch. Resuming a half-finished agent loop would mean rebuilding sandbox state, and with free tokens rerunning is simpler than resuming. After 3 deferrals a unit is recorded as `INFRA_ERROR`, so it still counts in the denominator.
+- **Signals:** SIGTERM or SIGINT (Actions cancellation, Ctrl-C) stops starting new units, waits up to 60 s for in-flight units, writes nothing partial, and exits 0.
+- **Locking:** one lock file per (run, shard), so two batches cannot work the same shard. In Actions, a workflow `concurrency` group does the same.
+- **Durability in Actions:** after each finished unit, the shard appends its row to `results/<run_id>/shard-<k>.jsonl` on a `results` branch (commit, then push with a rebase-and-retry loop; per-shard files never conflict). The job also uploads its files as an artifact at the end, even on failure. A job killed at the 6-hour limit loses at most the unit in flight.
+- **`repro status RUN_ID`:** units done, remaining, deferred, infra errors; tokens used per route; quota left; estimated nights to finish.
+- Exports predictions in SWT-bench format (`instance_id`, `model_name_or_path`, `model_patch`) so the official harness can score them.
 - `repro report` builds the README results table and plots from `results.jsonl` only. No hand-typed numbers.
 
-### 5.10 CLI
+### 5.10 Compute: GitHub Actions
+
+| Workflow | Trigger | What it does |
+|---|---|---|
+| `ci.yml` | push | Lint, types, hermetic tests |
+| `bootstrap.yml` | manual | Installs the SWT-bench harness, validates one gold instance, exports the Verified instance ids |
+| `live-smoke.yml` | manual | One tiny call per enabled route; prints the limits and headers it observed |
+| `docker-tests.yml` | manual | `pytest -m docker`, gold agreement on the pilot instances |
+| `eval.yml` | manual, plus a nightly schedule while a run is active | Matrix of N shards (default 6). Each frees disk, logs in to Docker Hub, runs `repro eval --shard k/N --deadline-minutes 330 --stop-when-exhausted`, commits rows per unit, uploads artifacts |
+| `official-score.yml` | manual | Runs the SWT-bench harness on exported predictions, one matrix job per instance |
+
+- Nightly schedule: 20:30 UTC (02:00 IST). The schedule is enabled only while a run is in progress and is removed when `repro status` reports it complete.
+- Secrets (added by me in repo settings, never pasted into chat): `MISTRAL_API_KEY`, `GEMINI_API_KEY`, `OPENROUTER_API_KEY`, optional `CEREBRAS_API_KEY`, `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`.
+- Workflows trigger only on `push` to `main`, `schedule`, and `workflow_dispatch`. Never `pull_request_target`, so no fork can reach the secrets.
+- A build session in chat can start a workflow through the GitHub REST API (`gh api .../dispatches`) and read results from the `results` branch. Eval tasks therefore need no machine of mine, only the one-time secrets setup.
+- **Public repo needed for the volume.** The whole plan needs roughly 11,000 runner-minutes (EVAL section 5). Public repos get unlimited minutes on standard runners. Private repos get 2,000 minutes/month on smaller 2-vCPU runners (3,000 with GitHub Pro from the Student Developer Pack). Default: make the repo public before M6. Fallback: run `repro eval` on my own x86_64 machine overnight with the same flags.
+
+### 5.11 CLI
 
 ```
-repro run     --repo PATH --issue FILE_OR_URL [--config ...]   reproduce mode, no fix needed
-repro verify  --run RUN_ID --fix PATCH                         oracle on an existing run
-repro eval    --config eval/configs/main.yaml                  benchmark run, resumable
-repro audit   --run RUN_ID                                     10x flaky audit
-repro mutate  --run RUN_ID                                     mutation scores
-repro report  --run RUN_ID                                     tables and plots
-repro show    RUN_ID INSTANCE_ID                               readable trace timeline (used in the demo)
-repro fixtures check                                           gold tests fail-before/pass-after on the toy repos
+repro run       --repo PATH --issue FILE_OR_URL [--config ...]     reproduce mode, no fix needed
+repro verify    --run RUN_ID --fix PATCH                           oracle on an existing run
+repro eval      --config CFG [--max-units N] [--deadline HH:MM]
+                [--shard k/N] [--stop-when-exhausted]               benchmark run, resumable
+repro status    RUN_ID                                             progress, quota left, ETA
+repro audit     --run RUN_ID                                       10x flaky audit
+repro mutate    --run RUN_ID                                       mutation scores
+repro report    --run RUN_ID [--check]                             tables, plots, final-run checks
+repro show      RUN_ID INSTANCE_ID                                 readable trace timeline (used in the demo)
+repro fixtures  check                                              gold tests fail-before/pass-after on toy repos
+repro llm       routes | ping | quota                              route table, live ping, quota state
 ```
 
 ## 6. Data flow for one bug
 
 1. Loader builds `AgentView`. Sealed fields stay in the eval process.
 2. Sandbox A starts from the instance image. `.git` is replaced, network is off.
-3. Agent loop runs. Each `check` spins up fresh pristine sandboxes and returns a verdict.
-4. Loop ends in a terminal state. Final candidate (if any) is frozen and hashed into the trace.
+3. Agent loop runs. Each model call goes through the router (budget check, limiter, route choice, retries). Each `check` spins up fresh pristine sandboxes and returns a verdict.
+4. Loop ends in a terminal state. If `DEFERRED`, everything is discarded and the unit is retried in a later batch. Otherwise the final candidate (if any) is frozen and hashed into the trace.
 5. Eval only: the oracle applies the gold fix in a fresh sandbox and runs the candidate 3 times.
-6. One row is appended to `results.jsonl`. The full event stream is in `traces/<instance>.jsonl`.
-7. Later passes over frozen candidates: flaky audit (10x), mutation score, official SWT-bench harness.
+6. One row is appended to the shard's results file. The full event stream is in `traces/<instance>.jsonl`.
+7. Later passes over frozen candidates: flaky audit (10x), mutation score, official SWT-bench harness. None of these call a model.
 
-`results.jsonl` row (one per instance per config): `instance_id, config_id, config_hash, model_id, terminal_state, stop_reason, candidate_sha256, gate{g0..g5}, oracle{transitions, reproduced}, steps, gate_checks, tokens_in, tokens_out, cost_usd, wall_clock_s, infra_error`.
+`results.jsonl` row (one per instance per config): `instance_id, config_id, config_hash, logical_model, routes_used, mixed, terminal_state, stop_reason, deferrals, candidate_sha256, gate{g0..g5}, oracle{transitions, reproduced}, steps, gate_checks, requests, tokens_in, tokens_out, rate_limit_wait_s, list_price_usd, wall_clock_s, infra_error`.
 
-Trace event: `ts, run_id, instance_id, seq, type (llm_call | tool_call | gate_check | stop | oracle), payload, cost_usd`.
+Trace event: `ts, run_id, instance_id, seq, type (llm_call | llm_retry | failover | trim | tool_call | gate_check | stop | oracle), payload, route, tokens`.
 
 ## 7. Key decisions and tradeoffs
 
@@ -304,43 +454,52 @@ Trace event: `ts, run_id, instance_id, seq, type (llm_call | tool_call | gate_ch
 | D2 | Verify on a pristine checkout from a test-only diff | Verify in the agent's workspace | Removes every "it worked in my workspace" way to fake success | A few extra container starts per check |
 | D3 | Additions-only diffs | Allow edits to existing tests | Simple rule, checkable with a diff parser, cannot weaken existing tests | Cannot fix a wrong existing test (rare, out of scope) |
 | D4 | Shell tool inside the sandbox | Narrow tool list only | Sandbox is the boundary; shell matches how bugs get investigated | Harder to predict agent behaviour; handled by budgets |
-| D5 | Pre-emptive budget ceilings | Check after each call | A ceiling you can overshoot is not a ceiling | Slightly conservative; may stop one call early |
-| D6 | Small model as default, frontier as ablation | Best model everywhere | Cost per bug is a headline number and the user is cost-sensitive | Lower raw S than the leaderboard top |
-| D7 | Official SWT-bench harness for headline S, own harness for everything else | Own harness only | Published numbers are only comparable through their harness. Agreement between the two is itself a reported check. | Two harnesses to keep in step |
-| D8 | SWT-bench Verified, pre-registered sample of 150 | Full 433, or Lite | Verified has the current published results. 150 keeps cost bounded with a CI of about plus or minus 8 points. | Not a leaderboard entry; wider CI |
+| D5 | Pre-emptive token ceilings | Check after each call | A ceiling you can overshoot is not a ceiling | Slightly conservative; may stop one call early |
+| D6 | Free-tier model as the only model | Paid frontier model | Budget is $0; also shows the harness works on a model any team can run free | Lower raw S than the leaderboard top |
+| D7 | Official SWT-bench harness for headline S where it fits in Actions; own oracle otherwise, with agreement reported | Own harness only | Published numbers are only comparable through their harness. Agreement between the two is itself a reported check. | Two harnesses; the official one may not fit on free runners for every instance (RISKS R12) |
+| D8 | SWT-bench Verified, pre-registered sample of 50 | 150 or all 433 | Free-tier volume and runner time. 50 gives a CI of about ±13 points. | Only large differences are detectable (EVAL H1) |
 | D9 | Unit-test mode | Reproduction-script mode | The product output is a committable test | Harder; lower S than script mode |
-| D10 | 3 reruns in the loop, 10 in the audit | 10 everywhere | In-loop reruns cost wall clock on every check. 3 catches gross flakiness; the 10x audit measures what slipped through. | 3 runs miss low-rate flakes (see EVAL H4 power table) |
+| D10 | 3 reruns in the loop, 10 in the audit | 10 everywhere | In-loop reruns cost wall clock on every check. 3 catches gross flakiness; the 10x audit measures what slipped through. | 3 runs miss low-rate flakes (EVAL H4 power table) |
 | D11 | Mutants only on fix-changed lines, compared against gold tests | Whole-file mutation, raw score | Tractable, and the paired comparison cancels equivalent mutants | Score says nothing about code outside the fix |
 | D12 | Reuse `swebench` test specs and log parsers | Write my own | Django alone is a large share of Verified and does not use pytest | A dependency I do not control |
-| D13 | Fakes behind interfaces, cassettes for the LLM | Build on the eval box only | Build sessions run where there is no Docker and no dataset access | Fakes can drift from real behaviour; contract tests run on both |
+| D13 | Fakes behind interfaces, cassettes for the LLM | Build on the eval machine only | Build sessions run where there is no Docker, dataset, or model API access | Fakes can drift from real behaviour; contract tests run on both |
 | D14 | JSONL files, no database | SQLite or Postgres | One writer per file, append-only, diffable, loads straight into pandas | No ad hoc SQL without loading first |
 | D15 | `docker` CLI via subprocess | Docker SDK for Python | Fewer deps, every action is a reproducible command | Manual timeout and output handling |
+| D16 | One OpenAI-compatible client, routes in config | One SDK per provider | Every free provider here speaks the same API; adding or dropping a provider is a YAML change | Lowest-common-denominator features; quirks handled by flags |
+| D17 | `pinned` failover for eval, `chain` only for dev and product | Fail over across models everywhere | Mixing models inside one eval makes the agent-vs-baseline comparison meaningless | An exhausted primary pauses the eval instead of continuing on another model |
+| D18 | Text action protocol | Native tool calling | Identical on every route, survives failover, simple cassettes | Possibly weaker instruction following than native tools |
+| D19 | Discard and rerun deferred units | Checkpoint and resume mid-loop | No sandbox state to rebuild; tokens are free | Wasted tokens and runner time on deferred units |
+| D20 | Static 1/N limit split across shards | Shared quota service | No coordination, nothing to host | Some quota headroom unused |
+| D21 | GitHub Actions on a public repo | Paid VM, or my laptop | Free, unlimited, triggerable from a chat session | Repo must be public; 14 GB disk and 6-hour jobs |
 
-## 8. Cost plan (estimates made before any measurement)
+## 8. Capacity plan (replaces the cost plan; estimates made before any measurement)
 
-| Item | Estimate |
-|---|---|
-| Agent on Haiku 5.5, per bug | about $0.08 (ceiling $0.25) |
-| Main run: 150 bugs, agent + B0 + B1 | about $15 |
-| Dev iteration on 30 bugs | about $15 |
-| Sonnet 5.5 ablation on 50 bugs | about $25 (ceiling $2 per bug) |
-| Variance reruns, judge ablation, slack | about $15 |
-| **LLM total** | **about $70, hard cap $80** |
-| Eval VM (8 vCPU, 32 GB, 250 GB, about 40 hours) | about $12 |
-| **Project total** | **about $80 to $85, never above $100** |
+Money spent: **$0.** The constraint is now quota and runner time.
 
-These are planning numbers. The measured figures replace them in the README.
+| Item | Tokens (estimate) | Runner-minutes (estimate) |
+|---|---|---|
+| Dev: 15 bugs × 3 rounds × (agent + B0 + B1) | about 20M | about 2,200 |
+| Final: agent, B0, B1 on 50 bugs | about 22M | about 2,400 |
+| Final: judge ablation on 50 bugs | about 14M | about 1,200 |
+| Final: 2 variance reruns of the agent on 50 bugs | about 25M | about 2,300 |
+| Flaky audit + mutation (no model calls) | 0 | about 1,500 |
+| Official SWT-bench scoring, pilots, docker tests | 0 | about 1,300 |
+| **Total** | **about 80M (about 8% of one month of Mistral's 1B)** | **about 11,000** |
+
+Assumptions: about 250K tokens per agent run (ceiling 600K), about 23 runner-minutes per agent unit including image pull, and 6 shards in parallel within Mistral's tokens/min limit. That puts the final run at about 4 nights and the whole project at about 2 weeks of nightly batches. The measured figures replace these in the README.
 
 ## 9. v2: GitHub App (design only)
 
 - Trigger: `issues.opened` with a `bug` label.
-- Flow: clone at default branch, read `.repro.yml` (image or Dockerfile, test command, test paths, monthly budget), run reproduce mode, and if the gate passes, comment the test with the failure output and a one-line command to run it. If the gate fails, stay silent.
+- Flow: clone at default branch, read `.repro.yml` (image or Dockerfile, test command, test paths, monthly token budget, model routes), run reproduce mode, and if the gate passes, comment the test with the failure output and a one-line command to run it. If the gate fails, stay silent.
 - When a PR that references the issue opens: run the oracle with the PR's diff as the fix and comment whether the Repro test now passes.
+- **Model routes for private code:** free tiers that train on prompts are not allowed. The installation must configure a paid no-training tier or a self-hosted open-weights model. The router already supports that; v2 enforces it with a `private_code: true` flag that refuses any route marked `trains_on_data`.
 - New problems v2 would have to solve: stronger isolation than Docker for untrusted repos, prompt injection through issue text (the bot must treat issue text as data), per-installation budgets, and environment setup without a prebuilt image.
 - M11 (stretch) ships the cheap version of this: a GitHub Action that runs inside the repo's own CI environment, which sidesteps the isolation and environment problems.
 
 ## 10. Open items to settle in the first sessions
 
-- Image source for the sandbox: reuse images built by the SWT-bench harness (preferred, same environment as the scorer) or pull prebuilt SWE-bench images. Decided in eval-box task E0.
-- Whether Haiku 5.5 clears the floor on the dev set. Decision rule is in EVAL_AND_METRICS.md section 5.
-- Exact SWT-bench CLI flags for the Verified split. Confirmed from their README in E0.
+- Which Mistral model the free mode actually offers, its exact version string, and whether the training opt-out keeps free access. Decided in M3 from the live Limits page.
+- Real Gemini free limits for this project, read from AI Studio in M3. If Flash is down at about 20 requests/day, the cross-model ablation is dropped.
+- Whether the SWT-bench harness's image builds fit on a free Actions runner. Found out in E0 (`bootstrap.yml`). If not, the oracle uses prebuilt SWE-bench images from Docker Hub, and the official harness scores only the instances it can (RISKS R12).
+- Repo visibility: public before M6 (default), or private with a cut eval. My call.
