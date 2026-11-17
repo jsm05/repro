@@ -93,11 +93,11 @@ After each session, my own part: read the code, and be able to answer the "expla
 **Not in M1:** gate rules, LLM, Docker.
 
 **Done when**
-- [ ] `repro fixtures check` prints F→P for all 8 fixtures
-- [ ] Sandbox contract tests (T1.x) pass on `LocalSandbox`
-- [ ] A timeout kills the whole process tree within 2 s of the limit
+- [x] `repro fixtures check` prints F→P for all 8 fixtures
+- [x] Sandbox contract tests (T1.x) pass on `LocalSandbox`
+- [x] A timeout kills the whole process tree within 2 s of the limit
 - [ ] CI is green on the first push
-- [ ] `bootstrap.yml` passes `actionlint` (it first runs for real in E0)
+- [x] `bootstrap.yml` passes `actionlint` (it first runs for real in E0)
 
 **Explain it:** Why is `AgentView` a separate type instead of a flag? What does the runner count as "failed" and why are errors excluded? What can `LocalSandbox` not protect against?
 
