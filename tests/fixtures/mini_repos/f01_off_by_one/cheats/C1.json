@@ -1,0 +1,8 @@
+{
+  "id": "C1",
+  "cheat": "assert False",
+  "rejected_by": "G5",
+  "test_ids": [
+    "tests/test_c1.py::test_cheat_assert_false"
+  ]
+}

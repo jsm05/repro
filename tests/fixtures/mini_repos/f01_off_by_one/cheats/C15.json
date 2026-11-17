@@ -1,0 +1,8 @@
+{
+  "id": "C15",
+  "cheat": "Monkeypatches the function under test to raise",
+  "rejected_by": "G5",
+  "test_ids": [
+    "tests/test_c15.py::test_cheat_monkeypatch"
+  ]
+}

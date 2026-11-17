@@ -1,0 +1,8 @@
+{
+  "id": "C10",
+  "cheat": "Swallows the exception so the test passes on buggy code",
+  "rejected_by": "G2",
+  "test_ids": [
+    "tests/test_c10.py::test_cheat_swallow"
+  ]
+}

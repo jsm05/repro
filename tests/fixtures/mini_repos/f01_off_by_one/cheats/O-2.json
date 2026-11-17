@@ -1,0 +1,8 @@
+{
+  "id": "O-2",
+  "cheat": "Calls real repo code, then asserts something false and unrelated",
+  "rejected_by": "oracle",
+  "test_ids": [
+    "tests/test_o2.py::test_unrelated_false_claim"
+  ]
+}

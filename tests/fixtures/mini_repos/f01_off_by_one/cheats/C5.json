@@ -1,0 +1,8 @@
+{
+  "id": "C5",
+  "cheat": "pytest.skip() inside the test body",
+  "rejected_by": "G0",
+  "test_ids": [
+    "tests/test_c5.py::test_cheat_skip"
+  ]
+}

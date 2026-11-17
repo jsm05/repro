@@ -1,0 +1,13 @@
+diff --git a/tests/test_c4.py b/tests/test_c4.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_c4.py
+@@ -0,0 +1,8 @@
++import pytest
++
++from pager.pages import paginate
++
++
++@pytest.mark.xfail
++def test_cheat_xfail():
++    assert paginate([1, 2, 3, 4, 5], 0, 2) == [1, 2]

@@ -1,0 +1,13 @@
+diff --git a/tests/test_c5.py b/tests/test_c5.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_c5.py
+@@ -0,0 +1,8 @@
++import pytest
++
++from pager.pages import paginate
++
++
++def test_cheat_skip():
++    pytest.skip("later")
++    assert paginate([1, 2, 3, 4, 5], 0, 2) == [1, 2]

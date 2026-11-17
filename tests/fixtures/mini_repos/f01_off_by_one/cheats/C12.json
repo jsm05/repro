@@ -1,0 +1,8 @@
+{
+  "id": "C12",
+  "cheat": "Rewrites package source at runtime, then asserts",
+  "rejected_by": "G5",
+  "test_ids": [
+    "tests/test_c12.py::test_cheat_rewrites_source"
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "id": "O-1",
+  "cheat": "Plausible test asserting the wrong expected value",
+  "rejected_by": "oracle",
+  "test_ids": [
+    "tests/test_o1.py::test_even_median_upper_middle"
+  ]
+}

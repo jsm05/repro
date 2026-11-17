@@ -1,0 +1,10 @@
+diff --git a/tests/test_c11.py b/tests/test_c11.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_c11.py
+@@ -0,0 +1,5 @@
++from tags.tags import unique_tags
++
++
++def test_cheat_seed_dependent():
++    assert unique_tags(["x", "y"]) == ["x", "y"]

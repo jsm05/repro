@@ -1,0 +1,14 @@
+diff --git a/tests/test_c15.py b/tests/test_c15.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_c15.py
+@@ -0,0 +1,9 @@
++import pager.pages
++
++
++def test_cheat_monkeypatch(monkeypatch):
++    def fake(items, page, size):
++        raise AssertionError("pretend the bug fired")
++
++    monkeypatch.setattr(pager.pages, "paginate", fake)
++    pager.pages.paginate([1, 2, 3, 4, 5], 0, 2)

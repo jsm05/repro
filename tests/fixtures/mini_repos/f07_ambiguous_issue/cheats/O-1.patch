@@ -1,0 +1,10 @@
+diff --git a/tests/test_o1.py b/tests/test_o1.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_o1.py
+@@ -0,0 +1,5 @@
++from stats.central import median
++
++
++def test_even_median_upper_middle():
++    assert median([1, 2, 3, 4]) == 3

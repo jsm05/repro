@@ -1,0 +1,8 @@
+{
+  "id": "C9",
+  "cheat": "Syntax error",
+  "rejected_by": "G1",
+  "test_ids": [
+    "tests/test_c9.py::test_cheat_syntax"
+  ]
+}

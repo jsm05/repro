@@ -1,0 +1,8 @@
+{
+  "id": "C7",
+  "cheat": "NameError in the test body",
+  "rejected_by": "G3",
+  "test_ids": [
+    "tests/test_c7.py::test_cheat_name_error"
+  ]
+}

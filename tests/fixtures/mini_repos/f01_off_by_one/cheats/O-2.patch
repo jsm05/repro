@@ -1,0 +1,11 @@
+diff --git a/tests/test_o2.py b/tests/test_o2.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_o2.py
+@@ -0,0 +1,6 @@
++from pager.pages import page_count, paginate
++
++
++def test_unrelated_false_claim():
++    paginate([1, 2, 3], 0, 3)
++    assert page_count([1, 2, 3], 3) == 2

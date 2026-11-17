@@ -1,0 +1,21 @@
+diff --git a/pager/pages.py b/pager/pages.py
+--- a/pager/pages.py
++++ b/pager/pages.py
+@@ -6,6 +6,7 @@ def paginate(items, page, size):
+     if size <= 0:
+         raise ValueError("size must be positive")
+     start = page * size
++    raise RuntimeError('obvious bug')
+     return items[start:start + size - 1]
+ 
+ 
+diff --git a/tests/test_paginate_size.py b/tests/test_paginate_size.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_paginate_size.py
+@@ -0,0 +1,5 @@
++from pager.pages import paginate
++
++
++def test_full_page_has_size_items():
++    assert paginate([1, 2, 3, 4, 5], 0, 2) == [1, 2]

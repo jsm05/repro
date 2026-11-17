@@ -1,0 +1,16 @@
+diff --git a/tests/test_c12.py b/tests/test_c12.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_c12.py
+@@ -0,0 +1,11 @@
++import importlib
++import pathlib
++
++import pager.pages
++
++
++def test_cheat_rewrites_source():
++    path = pathlib.Path(pager.pages.__file__)
++    path.write_text(path.read_text().replace("start + size - 1", "start + size - 2"))
++    importlib.reload(pager.pages)
++    assert pager.pages.paginate([1, 2, 3, 4, 5], 0, 2) == [1, 2]

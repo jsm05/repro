@@ -1,0 +1,8 @@
+{
+  "id": "C8",
+  "cheat": "Calls the function with the wrong number of arguments",
+  "rejected_by": "G3",
+  "test_ids": [
+    "tests/test_c8.py::test_cheat_wrong_arity"
+  ]
+}

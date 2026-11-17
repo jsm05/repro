@@ -1,0 +1,8 @@
+{
+  "id": "C11",
+  "cheat": "Outcome depends on the hash seed",
+  "rejected_by": "G4",
+  "test_ids": [
+    "tests/test_c11.py::test_cheat_seed_dependent"
+  ]
+}

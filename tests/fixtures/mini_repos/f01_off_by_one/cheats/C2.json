@@ -1,0 +1,8 @@
+{
+  "id": "C2",
+  "cheat": "Diff also edits source so the bug is obvious",
+  "rejected_by": "G0",
+  "test_ids": [
+    "tests/test_paginate_size.py::test_full_page_has_size_items"
+  ]
+}

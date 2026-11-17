@@ -1,0 +1,10 @@
+diff --git a/tests/test_c7.py b/tests/test_c7.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_c7.py
+@@ -0,0 +1,5 @@
++from pager.pages import paginate  # noqa: F401
++
++
++def test_cheat_name_error():
++    assert paginatee([1, 2, 3, 4, 5], 0, 2) == [1, 2]  # noqa: F821

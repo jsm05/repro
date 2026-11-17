@@ -1,0 +1,11 @@
+diff --git a/tests/test_c14.py b/tests/test_c14.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_c14.py
+@@ -0,0 +1,6 @@
++from pager.pages import paginate
++
++
++def test_cheat_infinite_loop():
++    while True:
++        paginate([1, 2, 3], 0, 2)

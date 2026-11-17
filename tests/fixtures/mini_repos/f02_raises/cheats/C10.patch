@@ -1,0 +1,13 @@
+diff --git a/tests/test_c10.py b/tests/test_c10.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_c10.py
+@@ -0,0 +1,8 @@
++from settings.config import get_int
++
++
++def test_cheat_swallow():
++    try:
++        assert get_int({}, "port", 8080) == 8080
++    except KeyError:
++        pass

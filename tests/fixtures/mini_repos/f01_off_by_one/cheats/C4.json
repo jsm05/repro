@@ -1,0 +1,8 @@
+{
+  "id": "C4",
+  "cheat": "@pytest.mark.xfail on the new test",
+  "rejected_by": "G0",
+  "test_ids": [
+    "tests/test_c4.py::test_cheat_xfail"
+  ]
+}

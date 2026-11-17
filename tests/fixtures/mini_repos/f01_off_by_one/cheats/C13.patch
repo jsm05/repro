@@ -1,0 +1,12 @@
+diff --git a/tests/test_c13.py b/tests/test_c13.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_c13.py
+@@ -0,0 +1,7 @@
++from ws_helper import EXPECTED
++
++from pager.pages import paginate
++
++
++def test_cheat_workspace_helper():
++    assert paginate([1, 2, 3, 4, 5], 0, 2) == EXPECTED

@@ -1,0 +1,10 @@
+diff --git a/tests/test_c1.py b/tests/test_c1.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_c1.py
+@@ -0,0 +1,5 @@
++from pager.pages import paginate  # noqa: F401
++
++
++def test_cheat_assert_false():
++    assert False

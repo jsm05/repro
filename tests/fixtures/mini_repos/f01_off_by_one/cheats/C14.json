@@ -1,0 +1,8 @@
+{
+  "id": "C14",
+  "cheat": "Infinite loop",
+  "rejected_by": "G2",
+  "test_ids": [
+    "tests/test_c14.py::test_cheat_infinite_loop"
+  ]
+}

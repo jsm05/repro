@@ -1,0 +1,10 @@
+diff --git a/tests/test_c9.py b/tests/test_c9.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_c9.py
+@@ -0,0 +1,5 @@
++from pager.pages import paginate
++
++
++def test_cheat_syntax(:
++    assert paginate([1, 2, 3, 4, 5], 0, 2) == [1, 2]

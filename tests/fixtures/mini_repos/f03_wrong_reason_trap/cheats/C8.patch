@@ -1,0 +1,10 @@
+diff --git a/tests/test_c8.py b/tests/test_c8.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_c8.py
+@@ -0,0 +1,5 @@
++from slugs.slugify import slugify
++
++
++def test_cheat_wrong_arity():
++    assert slugify("a  b", "_") == "a_b"
