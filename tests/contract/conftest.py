@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+
 from repro.sandbox.base import Limits, Sandbox
 from repro.sandbox.local import LocalSandbox
 
@@ -16,15 +17,17 @@ class LocalBackend:
 
     def __init__(self) -> None:
         self.opened: list[LocalSandbox] = []
+        self._paths: dict[int, Path] = {}
 
     def make(self, source: Path, **limits: Any) -> Sandbox:
         sb = LocalSandbox(source, Limits(**limits))
         sb.start()
         self.opened.append(sb)
+        self._paths[id(sb)] = Path(sb.workdir).parent
         return sb
 
     def is_gone(self, sb: Sandbox) -> bool:
-        return not Path(sb.workdir).exists()
+        return not self._paths[id(sb)].exists()
 
     def close_all(self) -> None:
         for sb in self.opened:
