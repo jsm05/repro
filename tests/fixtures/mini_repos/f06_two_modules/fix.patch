@@ -1,0 +1,18 @@
+diff --git a/money/format.py b/money/format.py
+--- a/money/format.py
++++ b/money/format.py
+@@ -4,4 +4,4 @@
+ def format_cents(cents):
+     sign = "-" if cents < 0 else ""
+     cents = abs(cents)
+-    return "{}${}.{}".format(sign, cents // 100, cents % 100)
++    return "{}${}.{:02d}".format(sign, cents // 100, cents % 100)
+diff --git a/money/parse.py b/money/parse.py
+--- a/money/parse.py
++++ b/money/parse.py
+@@ -7,4 +7,4 @@ def to_cents(text):
+         whole, frac = text.split(".", 1)
+     else:
+         whole, frac = text, "0"
+-    return int(whole or "0") * 100 + int(frac)
++    return int(whole or "0") * 100 + int((frac + "00")[:2])

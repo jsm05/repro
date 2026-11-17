@@ -1,0 +1,20 @@
+{
+  "instance_id": "fixture__f07_ambiguous_issue",
+  "repo": "fixtures/f07_ambiguous_issue",
+  "base_commit": "fixture",
+  "designed_to_exercise": "Issue text allows a plausible but wrong expectation (ends F->F)",
+  "test_cmd_spec": {
+    "framework": "pytest",
+    "test_dirs": [
+      "tests"
+    ]
+  },
+  "fail_to_pass": [
+    "tests/test_median_even.py::test_even_length_median_averages_middle_pair"
+  ],
+  "pass_to_pass": [
+    "tests/test_central.py::test_mean",
+    "tests/test_central.py::test_median_odd"
+  ],
+  "hints_text": ""
+}

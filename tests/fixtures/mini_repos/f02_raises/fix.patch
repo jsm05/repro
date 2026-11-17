@@ -1,0 +1,15 @@
+diff --git a/settings/config.py b/settings/config.py
+--- a/settings/config.py
++++ b/settings/config.py
+@@ -3,8 +3,9 @@
+ 
+ def get_int(config, key, default=None):
+     """Return config[key] as an int, or `default` when the key is missing."""
+-    value = config[key]
+-    return int(value)
++    if key not in config:
++        return default
++    return int(config[key])
+ 
+ 
+ def get_bool(config, key, default=False):

@@ -1,0 +1,23 @@
+{
+  "instance_id": "fixture__f06_two_modules",
+  "repo": "fixtures/f06_two_modules",
+  "base_commit": "fixture",
+  "designed_to_exercise": "Bug spans two modules",
+  "test_cmd_spec": {
+    "framework": "pytest",
+    "test_dirs": [
+      "tests"
+    ]
+  },
+  "fail_to_pass": [
+    "tests/test_money_roundtrip.py::test_single_digit_fraction",
+    "tests/test_money_roundtrip.py::test_cents_are_zero_padded",
+    "tests/test_money_roundtrip.py::test_roundtrip"
+  ],
+  "pass_to_pass": [
+    "tests/test_money.py::test_two_digit_fraction",
+    "tests/test_money.py::test_thousands_separator",
+    "tests/test_money.py::test_format_negative"
+  ],
+  "hints_text": ""
+}

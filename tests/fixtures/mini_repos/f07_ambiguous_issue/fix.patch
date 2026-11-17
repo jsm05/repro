@@ -1,0 +1,12 @@
+diff --git a/stats/central.py b/stats/central.py
+--- a/stats/central.py
++++ b/stats/central.py
+@@ -11,4 +11,7 @@ def median(values):
+     if not values:
+         raise ValueError("median of empty list")
+     ordered = sorted(values)
+-    return ordered[(len(ordered) - 1) // 2]
++    mid = len(ordered) // 2
++    if len(ordered) % 2:
++        return ordered[mid]
++    return (ordered[mid - 1] + ordered[mid]) / 2

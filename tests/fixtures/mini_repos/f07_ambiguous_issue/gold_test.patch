@@ -1,0 +1,10 @@
+diff --git a/tests/test_median_even.py b/tests/test_median_even.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_median_even.py
+@@ -0,0 +1,5 @@
++from stats.central import median
++
++
++def test_even_length_median_averages_middle_pair():
++    assert median([4, 1, 3, 2]) == 2.5

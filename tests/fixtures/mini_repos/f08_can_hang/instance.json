@@ -1,0 +1,20 @@
+{
+  "instance_id": "fixture__f08_can_hang",
+  "repo": "fixtures/f08_can_hang",
+  "base_commit": "fixture",
+  "designed_to_exercise": "A wrong test can loop forever (timeout path)",
+  "test_cmd_spec": {
+    "framework": "pytest",
+    "test_dirs": [
+      "tests"
+    ]
+  },
+  "fail_to_pass": [
+    "tests/test_collatz_steps.py::test_one_needs_no_steps",
+    "tests/test_collatz_steps.py::test_six_takes_eight_steps"
+  ],
+  "pass_to_pass": [
+    "tests/test_steps.py::test_sequence_of_six"
+  ],
+  "hints_text": ""
+}

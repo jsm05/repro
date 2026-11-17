@@ -1,0 +1,20 @@
+{
+  "instance_id": "fixture__f05_append_only",
+  "repo": "fixtures/f05_append_only",
+  "base_commit": "fixture",
+  "designed_to_exercise": "New test must be appended to an existing test file",
+  "test_cmd_spec": {
+    "framework": "pytest",
+    "test_dirs": [
+      "tests"
+    ]
+  },
+  "fail_to_pass": [
+    "tests/test_text.py::test_truncate_result_fits_width"
+  ],
+  "pass_to_pass": [
+    "tests/test_text.py::test_short_text_unchanged",
+    "tests/test_text.py::test_word_count"
+  ],
+  "hints_text": ""
+}

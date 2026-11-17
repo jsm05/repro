@@ -1,0 +1,22 @@
+{
+  "instance_id": "fixture__f03_wrong_reason_trap",
+  "repo": "fixtures/f03_wrong_reason_trap",
+  "base_commit": "fixture",
+  "designed_to_exercise": "An obvious test fails with a TypeError in the test itself",
+  "test_cmd_spec": {
+    "framework": "pytest",
+    "test_dirs": [
+      "tests"
+    ]
+  },
+  "fail_to_pass": [
+    "tests/test_slugify_spaces.py::test_repeated_spaces_collapse",
+    "tests/test_slugify_spaces.py::test_repeated_spaces_collapse_custom_sep"
+  ],
+  "pass_to_pass": [
+    "tests/test_slugify.py::test_basic",
+    "tests/test_slugify.py::test_punctuation_dropped",
+    "tests/test_slugify.py::test_custom_sep"
+  ],
+  "hints_text": ""
+}

@@ -1,0 +1,14 @@
+diff --git a/tests/test_collatz_steps.py b/tests/test_collatz_steps.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_collatz_steps.py
+@@ -0,0 +1,9 @@
++from collatz.steps import collatz_steps
++
++
++def test_one_needs_no_steps():
++    assert collatz_steps(1) == 0
++
++
++def test_six_takes_eight_steps():
++    assert collatz_steps(6) == 8

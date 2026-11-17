@@ -1,0 +1,14 @@
+diff --git a/tests/test_slugify_spaces.py b/tests/test_slugify_spaces.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_slugify_spaces.py
+@@ -0,0 +1,9 @@
++from slugs.slugify import slugify
++
++
++def test_repeated_spaces_collapse():
++    assert slugify("Hello   big  World") == "hello-big-world"
++
++
++def test_repeated_spaces_collapse_custom_sep():
++    assert slugify("a  b", sep="_") == "a_b"

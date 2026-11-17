@@ -1,0 +1,10 @@
+diff --git a/tests/test_get_int_default.py b/tests/test_get_int_default.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_get_int_default.py
+@@ -0,0 +1,5 @@
++from settings.config import get_int
++
++
++def test_missing_key_returns_default():
++    assert get_int({}, "port", 8080) == 8080

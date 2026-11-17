@@ -1,0 +1,21 @@
+{
+  "instance_id": "fixture__f01_off_by_one",
+  "repo": "fixtures/f01_off_by_one",
+  "base_commit": "fixture",
+  "designed_to_exercise": "Plain assertion bug",
+  "test_cmd_spec": {
+    "framework": "pytest",
+    "test_dirs": [
+      "tests"
+    ]
+  },
+  "fail_to_pass": [
+    "tests/test_paginate_size.py::test_full_page_has_size_items"
+  ],
+  "pass_to_pass": [
+    "tests/test_pages.py::test_page_count",
+    "tests/test_pages.py::test_page_past_end_is_empty",
+    "tests/test_pages.py::test_size_must_be_positive"
+  ],
+  "hints_text": ""
+}

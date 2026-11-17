@@ -1,0 +1,20 @@
+{
+  "instance_id": "fixture__f04_hash_order",
+  "repo": "fixtures/f04_hash_order",
+  "base_commit": "fixture",
+  "designed_to_exercise": "Output depends on set ordering; a careless test is hash-seed dependent",
+  "test_cmd_spec": {
+    "framework": "pytest",
+    "test_dirs": [
+      "tests"
+    ]
+  },
+  "fail_to_pass": [
+    "tests/test_tag_order.py::test_first_seen_order_kept"
+  ],
+  "pass_to_pass": [
+    "tests/test_tags.py::test_duplicates_removed",
+    "tests/test_tags.py::test_normalize"
+  ],
+  "hints_text": ""
+}

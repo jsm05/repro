@@ -1,0 +1,12 @@
+diff --git a/tags/tags.py b/tags/tags.py
+--- a/tags/tags.py
++++ b/tags/tags.py
+@@ -3,7 +3,7 @@
+ 
+ def unique_tags(tags):
+     """Return tags with duplicates removed, keeping first-seen order."""
+-    return list(set(tags))
++    return list(dict.fromkeys(tags))
+ 
+ 
+ def normalize(tag):

@@ -1,0 +1,11 @@
+diff --git a/tests/test_tag_order.py b/tests/test_tag_order.py
+new file mode 100644
+--- /dev/null
++++ b/tests/test_tag_order.py
+@@ -0,0 +1,6 @@
++from tags.tags import unique_tags
++
++
++def test_first_seen_order_kept():
++    tags = ["red", "green", "red", "blue", "amber", "green", "teal"]
++    assert unique_tags(tags) == ["red", "green", "blue", "amber", "teal"]

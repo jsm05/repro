@@ -1,0 +1,12 @@
+diff --git a/tests/test_text.py b/tests/test_text.py
+--- a/tests/test_text.py
++++ b/tests/test_text.py
+@@ -7,3 +7,8 @@ def test_short_text_unchanged():
+ 
+ def test_word_count():
+     assert word_count("one two  three") == 3
++
++
++def test_truncate_result_fits_width():
++    assert truncate("abcdefghij", 6) == "abc..."
++    assert len(truncate("abcdefghij", 6)) == 6

@@ -1,0 +1,12 @@
+diff --git a/textkit/text.py b/textkit/text.py
+--- a/textkit/text.py
++++ b/textkit/text.py
+@@ -5,7 +5,7 @@ def truncate(text, width, marker="..."):
+     """Shorten `text` so the result, marker included, is at most `width` chars."""
+     if len(text) <= width:
+         return text
+-    return text[:width] + marker
++    return text[: max(width - len(marker), 0)] + marker
+ 
+ 
+ def word_count(text):

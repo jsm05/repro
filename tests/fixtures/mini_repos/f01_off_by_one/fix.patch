@@ -1,0 +1,12 @@
+diff --git a/pager/pages.py b/pager/pages.py
+--- a/pager/pages.py
++++ b/pager/pages.py
+@@ -6,7 +6,7 @@ def paginate(items, page, size):
+     if size <= 0:
+         raise ValueError("size must be positive")
+     start = page * size
+-    return items[start:start + size - 1]
++    return items[start:start + size]
+ 
+ 
+ def page_count(items, size):

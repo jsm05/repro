@@ -1,0 +1,21 @@
+{
+  "instance_id": "fixture__f02_raises",
+  "repo": "fixtures/f02_raises",
+  "base_commit": "fixture",
+  "designed_to_exercise": "Bug shows up as an unexpected exception",
+  "test_cmd_spec": {
+    "framework": "pytest",
+    "test_dirs": [
+      "tests"
+    ]
+  },
+  "fail_to_pass": [
+    "tests/test_get_int_default.py::test_missing_key_returns_default"
+  ],
+  "pass_to_pass": [
+    "tests/test_config.py::test_get_int_parses_strings",
+    "tests/test_config.py::test_get_bool_default",
+    "tests/test_config.py::test_get_bool_true_values"
+  ],
+  "hints_text": ""
+}

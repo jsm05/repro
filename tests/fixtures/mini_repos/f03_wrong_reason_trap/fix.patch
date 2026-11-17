@@ -1,0 +1,9 @@
+diff --git a/slugs/slugify.py b/slugs/slugify.py
+--- a/slugs/slugify.py
++++ b/slugs/slugify.py
+@@ -7,4 +7,4 @@ def slugify(text, *, sep="-"):
+     """Lowercase `text` and join its words with `sep`."""
+     text = text.strip().lower()
+     text = re.sub(r"[^a-z0-9\s]", "", text)
+-    return text.replace(" ", sep)
++    return sep.join(text.split())
