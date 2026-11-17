@@ -5,9 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+
 from repro.sandbox.local import LocalSandbox
 from repro.sandbox.treehash import is_test_path, tree_hash
-
 from tests.helpers import FIXTURES_ROOT, tiny_repo
 
 

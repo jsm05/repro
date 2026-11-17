@@ -3,8 +3,8 @@ from __future__ import annotations
 from collections.abc import Iterator
 
 import pytest
-from repro.datasets.fixtures import FixtureSource
 
+from repro.datasets.fixtures import FixtureSource
 from tests.helpers import FIXTURES_ROOT
 
 

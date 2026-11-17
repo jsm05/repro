@@ -6,8 +6,8 @@ import time
 from pathlib import Path
 
 import pytest
-from repro.sandbox.base import SandboxError, SandboxPathError
 
+from repro.sandbox.base import SandboxError, SandboxPathError
 from tests.contract.conftest import LocalBackend
 from tests.helpers import SANDBOX_DIGEST, dir_digest, tiny_repo, wait_dead
 

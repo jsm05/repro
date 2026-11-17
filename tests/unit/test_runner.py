@@ -6,11 +6,11 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
+
 from repro.models import TestStatus
 from repro.runner.pytest_runner import run_tests
 from repro.sandbox.base import Limits
 from repro.sandbox.local import LocalSandbox
-
 from tests.helpers import write_tree
 
 SIX = """

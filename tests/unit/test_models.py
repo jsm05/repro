@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import pytest
+
 from repro.datasets.fixtures import FixtureSource
 from repro.models import AgentView, Candidate, SealedView
-
 from tests.helpers import FIXTURE_NAMES
 
 

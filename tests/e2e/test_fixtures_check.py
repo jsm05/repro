@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import pytest
 from click.testing import CliRunner
+
 from repro.cli import main
 from repro.datasets.fixtures import FixtureSource, check_fixture
 from repro.models import TestStatus
-
 from tests.helpers import FIXTURE_NAMES, FIXTURES_ROOT
 
 
