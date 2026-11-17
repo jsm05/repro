@@ -15,7 +15,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from repro.models import AgentView, Instance, SealedView, TestCmdSpec, TestStatus
+from repro.models import STATUS_LETTER, AgentView, Instance, SealedView, TestCmdSpec, TestStatus
 from repro.runner.pytest_runner import run_tests
 from repro.sandbox.base import Limits
 from repro.sandbox.local import LocalSandbox
@@ -75,18 +75,6 @@ class FixtureSource:
             designed_to_exercise=meta.designed_to_exercise,
         )
 
-
-LETTER = {
-    TestStatus.PASSED: "P",
-    TestStatus.FAILED: "F",
-    TestStatus.ERROR: "E",
-    TestStatus.SKIPPED: "S",
-    TestStatus.XFAIL: "X",
-    TestStatus.XPASS: "X",
-    TestStatus.TIMEOUT: "T",
-}
-
-
 @dataclass
 class FixtureCheck:
     name: str
@@ -108,7 +96,7 @@ class FixtureCheck:
     @property
     def transition(self) -> str:
         pairs = {
-            f"{LETTER[self.before[t]]}→{LETTER.get(self.after.get(t, TestStatus.ERROR), 'E')}"
+            f"{STATUS_LETTER[self.before[t]]}→{STATUS_LETTER[self.after.get(t, TestStatus.ERROR)]}"
             for t in self.before
         }
         return ",".join(sorted(pairs)) or "?"

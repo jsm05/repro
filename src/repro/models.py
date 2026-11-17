@@ -31,6 +31,16 @@ class TestStatus(StrEnum):
     TIMEOUT = "TIMEOUT"
 
 
+STATUS_LETTER = {
+    TestStatus.PASSED: "P",
+    TestStatus.FAILED: "F",
+    TestStatus.ERROR: "E",
+    TestStatus.SKIPPED: "S",
+    TestStatus.XFAIL: "X",
+    TestStatus.XPASS: "X",
+    TestStatus.TIMEOUT: "T",
+}
+
 Phase = Literal["collection", "setup", "call", "teardown"]
 
 
@@ -64,6 +74,9 @@ class TestOutcome(BaseModel):
     duration_s: float = 0.0
     failure: FailureDetail | None = None
     note: str = ""
+    # Repo functions ("path:func") whose bodies ran during the call phase. None when the
+    # run was not traced. Feeds G5.
+    repo_calls: list[str] | None = None
 
 
 class ExecResult(BaseModel):
@@ -138,3 +151,52 @@ class Candidate(BaseModel):
     def sha256(self) -> str:
         payload = json.dumps({"diff": self.diff, "test_ids": self.test_ids}, sort_keys=True)
         return hashlib.sha256(payload.encode()).hexdigest()
+
+
+GateCheck = Literal["G0", "G1", "G2", "G3", "G4", "G5"]
+
+
+class GateVerdict(BaseModel):
+    """Result of the online gate. `failed_check` names the first check that failed."""
+
+    model_config = ConfigDict(frozen=True)
+
+    passed: bool
+    failed_check: GateCheck | None
+    reason: str
+    candidate_sha256: str
+    test_status: dict[str, list[TestStatus]] = Field(default_factory=dict)  # one per run
+    signatures: dict[str, str] = Field(default_factory=dict)  # failing tests, from run 0
+    reproducing_tests: list[str] = Field(default_factory=list)
+    sandboxes_used: int = 0
+
+
+class InstanceOutcome(StrEnum):
+    REPRODUCED = "REPRODUCED"
+    WRONG_TEST = "WRONG_TEST"
+    NO_TEST = "NO_TEST"
+    INFRA_ERROR = "INFRA_ERROR"
+
+
+class Transition(BaseModel):
+    """Before (buggy) and after (fixed, one status per run) for one test."""
+
+    model_config = ConfigDict(frozen=True)
+
+    test_id: str
+    before: TestStatus
+    after: list[TestStatus]
+    label: str  # e.g. "F→P"; "~" after the arrow means the runs disagreed
+
+
+class OracleVerdict(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    outcome: InstanceOutcome
+    reason: str
+    candidate_sha256: str = ""
+    o1_pass_after: bool = False
+    o2_no_collateral: bool = False
+    candidate_tests: list[str] = Field(default_factory=list)
+    transitions: dict[str, Transition] = Field(default_factory=dict)
+    flaky_tests: list[str] = Field(default_factory=list)

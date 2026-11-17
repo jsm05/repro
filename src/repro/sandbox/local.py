@@ -253,3 +253,16 @@ class LocalSandbox:
 
     def source_tree_hash(self) -> str:
         return tree_hash(str(self._live_root()))
+
+
+def local_factory(
+    source_dir: str | os.PathLike[str], limits: Limits | None = None
+) -> Callable[[], LocalSandbox]:
+    """A factory that hands out fresh, started LocalSandboxes of `source_dir`."""
+
+    def make() -> LocalSandbox:
+        sb = LocalSandbox(source_dir, limits)
+        sb.start()
+        return sb
+
+    return make

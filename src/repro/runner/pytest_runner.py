@@ -59,9 +59,13 @@ def run_tests(
     *,
     timeout_s: float = 180.0,
     hash_seed: int = 0,
+    trace: bool = False,
     extra_env: Mapping[str, str] | None = None,
 ) -> TestRunResult:
-    """Run `test_ids` (node ids or files) once and parse the outcomes."""
+    """Run `test_ids` (node ids or files) once and parse the outcomes.
+
+    trace=True records which repo functions ran during each test's call phase (G5).
+    """
     if not test_ids:
         raise ValueError("no tests requested")
     workdir = sandbox.workdir
@@ -72,6 +76,8 @@ def run_tests(
         "REPRO_REPORT": f"{workdir}/{report_rel}",
         "PYTHONHASHSEED": str(hash_seed),
     }
+    if trace:
+        env.update({"REPRO_TRACE": "1", "REPRO_ROOT": workdir})
     if extra_env:
         env.update(extra_env)
     result = sandbox.exec(build_pytest_cmd(sandbox.python, workdir, test_ids), timeout_s, env)
@@ -158,8 +164,14 @@ def _classify(nodeid: str, phases: dict[str, dict[str, Any]], workdir: str) -> T
         and status in (TestStatus.PASSED, TestStatus.XPASS, TestStatus.SKIPPED, TestStatus.XFAIL)
     ):
         status, failure = TestStatus.ERROR, _failure(teardown, "teardown", workdir)
+    calls = call.get("repo_calls") if call else None
     return TestOutcome(
-        test_id=nodeid, status=status, duration_s=duration, failure=failure, note=note
+        test_id=nodeid,
+        status=status,
+        duration_s=duration,
+        failure=failure,
+        note=note,
+        repo_calls=[str(c) for c in calls] if isinstance(calls, list) else None,
     )
 
 
