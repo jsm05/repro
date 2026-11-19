@@ -12,11 +12,15 @@ dependencies = [
   "pydantic>=2.5",
   "pyyaml>=6.0",
   "click>=8.1",
+  "openai>=1.40",
+  "tiktoken>=0.7",
+  "tzdata",
 ]
 
 [project.optional-dependencies]
 dev = [
   "pytest>=8",
+  "hypothesis>=6",
   "ruff>=0.5",
   "mypy>=1.10",
   "types-PyYAML",
@@ -30,7 +34,7 @@ repro = "repro.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-repro = ["py.typed"]
+repro = ["py.typed", "llm/list_prices.yaml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -40,7 +44,7 @@ markers = [
   "live_llm: calls real free-tier APIs (runs in live-smoke.yml)",
   "slow: slow test",
 ]
-norecursedirs = ["fixtures", ".git", "eval"]
+norecursedirs = ["fixtures", ".git", "eval", ".hypothesis", "runs"]
 
 [tool.ruff]
 line-length = 100
