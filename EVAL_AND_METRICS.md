@@ -164,9 +164,9 @@ All runs marked (Actions) are GitHub Actions workflows, started from a chat sess
 | Variance reruns | 100 | about 25M | about 2,300 | about 1 to 2 |
 | Audit, mutation, official scoring | n/a | 0 | about 2,800 | about 1 to 2 |
 
-Tokens total about 80M against Mistral's 1B per month, so tokens are not the limit. The binding limit is Mistral's 500K tokens/min, which caps parallelism at about 6 shards. That and runner time set the pace.
+Tokens total about 80M. NVIDIA's free endpoint publishes no token cap; M3's soak test checks for a hidden daily one. At about 40 requests/min per account, request volume is not the limit either. Model response time is: about 45 s per call, so slow responses add about 10 runner-minutes per agent unit and the runner-minute total is about 13,500 (revised 2026-11-19). Model latency and Docker time set the pace.
 
-**Model decision rule (applied on Dev before the freeze):** if `A-main` always-emit S on Dev is below 3 of 15 after two rounds of prompt iteration, switch the primary to the next model in the preference list (DESIGN 5.5) that Mistral's free mode offers, and restart Dev. The switch and the reason are recorded in `DECISIONS.md`. If no free model clears the floor, the project still reports its numbers; a low S on a free model is a result, and the gate precision and harness work stand on their own.
+**Model decision rule (applied on Dev before the freeze):** if `A-main` always-emit S on Dev is below 3 of 15 after two rounds of prompt iteration, switch the primary to the next model in the preference list (DESIGN 5.5) that passes the live smoke test, and restart Dev. The switch and the reason are recorded in `DECISIONS.md`. If no free model clears the floor, the project still reports its numbers; a low S on a free model is a result, and the gate precision and harness work stand on their own.
 
 **If the freeze has to be broken** (a harness bug found during the Test run): fix it, bump to `eval-freeze-v2`, rerun everything affected, and say so in the README. Prompt or gate tuning after seeing Test results is not allowed under any tag.
 
@@ -271,7 +271,7 @@ Final results are merged into `main` in M9. Traces go to `main` if they fit; oth
 - SWT-bench paper (Mündler et al., NeurIPS 2024): https://arxiv.org/abs/2406.12952
 - SWT-bench harness and README: https://github.com/logic-star-ai/swt-bench
 - SWE-bench: https://www.swebench.com
-- Mistral free-tier limits: https://help.mistral.ai/en/articles/225174-what-are-the-limits-of-the-free-tier
+- NVIDIA API catalog (free endpoints): https://build.nvidia.com/models
 - OpenRouter limits: https://openrouter.ai/docs/api/reference/limits
 - Cerebras rate limits and trial terms: https://inference-docs.cerebras.ai/support/rate-limits
 - Gemini API rate limits: https://ai.google.dev/gemini-api/docs/rate-limits

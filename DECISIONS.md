@@ -53,3 +53,24 @@ One "before" run on the buggy code with the candidate (seed 0), then three "afte
 
 **D-M2-8. Cheat storage and C15.**
 Each cheat is stored as `cheats/<ID>.patch` plus `cheats/<ID>.json` (description, expected check, test ids) inside its fixture. C15 swaps the function under test for a fake that raises `AssertionError`. G3 accepts that (it looks like a test assertion), and the G5 tracer catches it because no repo function ran, matching the check TEST_SPEC names.
+
+## 2026-11-19, E0 (setup results and the provider change)
+
+**D-E0-1. The SWT-bench harness builds its own images on a free runner.**
+`bootstrap.yml` (run 44538908817) resolved the gold instance `sympy__sympy-20590` in 440 s, most of it image builds. One instance's images take about 10.6 GB (base 2.2, env 4.0, eval 4.4), and the runner has 37 GB free after cleanup. So the fallback in RISKS R12 (prebuilt SWE-bench images from Docker Hub) is not needed, and the Docker Hub secrets are optional. All 433 Verified ids are in `eval/samples/verified_ids.txt`.
+
+**D-E0-2. Runner facts differ from the plan's assumptions.**
+The private-repo runner has 2 CPUs and 7.7 GB RAM, not the 4 CPUs and 16 GB the plan assumed (those are public-repo runners). Disk is better than assumed: 72 GB total, 37 GB free after removing preinstalled tools, versus about 14 GB in the plan. Making the repo public before M6 stays the default.
+
+**D-E0-3. Primary model: `mistralai/mistral-large-4-1t-a52b` on NVIDIA's free endpoint, replacing Mistral's own free tier.**
+Why: on 2026-11-19, Mistral's console asked for prepaid credits to enable API keys, so its free API plan is no longer usable at $0. Also ruled out: Cerebras (needs a card), Groq (8K tokens/min and 200K tokens/day, below one agent prompt), GitHub Models (8K input tokens per request). NVIDIA's API catalog lists free endpoints with no card (phone verification only). Two probe scripts run on my laptop on 2026-11-19 (78 requests in total):
+- 32 models visible to the key.
+- `moonshotai/kimi-k3.1-pro`: 174 s for a tiny request, timeouts on large prompts, and a 50-request burst got 29 timeouts and 21 HTTP 429s. Overloaded.
+- `z-ai/glm-5.3-flash`: timed out.
+- `mistralai/mistral-large-4-1t-a52b`: 23 of 23 requests succeeded. A 9K-token prompt took 16 s. Ten agent-sized calls took 22 s median, 100 s worst. Three parallel calls had no 429s, worst 144 s. It is a reasoning model: it used 299 of a 300-token output limit on reasoning.
+- No rate-limit headers and no credit counter seen.
+
+What changes in the plan: the provider table and chain order (DESIGN 5.5); output cap per call from 2K to 8K tokens unless reasoning effort can be lowered (decided in M3); model response time no longer counts against the 25-minute active-time budget, and the hard cap per bug rises from 60 to 120 minutes; runner-minutes from about 11,000 to about 13,500; a one-night soak test in M3 (T3.L2) before any eval run; new risks R31 (endpoint slow, overloaded or withdrawn) and R32 (reasoning tokens eat the output budget), with the positioning risks renumbered R33 to R37. Preference list if the primary must be replaced: `nvidia/nemotron-3-ultra-550b-a55b`, `poolside/laguna-xs-2.1`, Gemini Flash-Lite.
+
+**D-E0-4. Secrets in the repo.**
+`NVIDIA_API_KEY`, `GEMINI_API_KEY` and `OPENROUTER_API_KEY` added in repo settings. No `MISTRAL_API_KEY`. Docker Hub secrets optional (D-E0-1).

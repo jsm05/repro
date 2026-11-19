@@ -124,11 +124,12 @@ All against `FakeProvider` (an in-process HTTP stub speaking the OpenAI chat com
 | T3.17 | 5xx and timeouts: backoff of 1, 2, 4, 8, 16 s within jitter bounds, then failover; three in a row trip a 10-minute circuit breaker | Transient errors are retried, then routed around |
 | T3.18 | `pinned`: primary route exhausted and a same-weights route available, it is used; none available and reset under 10 minutes, it waits; reset later than that, it signals DEFERRED; a different model is never called | The eval never mixes models |
 | T3.19 | `chain`: exhaustion moves to the next model in order; the run is tagged `mixed`; every call records its route | Product and dev failover works and is visible |
-| T3.20 | Quota store persists across a restart; resets at the UTC day (OpenRouter), the Pacific day including daylight-saving changes (Gemini), and the calendar month (Mistral); provider-reported remaining quota overrides the local count | Daily and monthly quotas are tracked correctly between batches |
+| T3.20 | Quota store persists across a restart; resets at the UTC day (OpenRouter), the Pacific day including daylight-saving changes (Gemini), and the calendar month (any route with a monthly quota); provider-reported remaining quota overrides the local count | Daily and monthly quotas are tracked correctly between batches |
 | T3.21 | With `--shard 2/6` every route limit is one sixth; six simulated shards running at full speed together never exceed the route limit | Static quota split is safe |
 | T3.22 | 400 context-length: trims to 75% of the route window and retries once, a second failure surfaces the error; 401 disables the route for the run | Remaining error classes handled as specified |
 | T3.23 | An eval config using a route not marked `free: true` fails validation; with `private_code: true`, any route marked `trains_on_data` is refused | No accidental paid usage; private code never goes to training tiers |
 | T3.L1 | (`live_llm`, runs in `live-smoke.yml`) One small call per enabled route: it answers, the ledger's tokens equal the provider-reported usage, and the visible model list is recorded | Metering and routing match reality |
+| T3.L2 | (`live_llm`, runs in `soak.yml`) About 500 requests of mixed sizes to the primary route over one night; success rate, latency p50 and p95, 429s, timeouts and quota errors recorded in `eval/soak.md` | The primary can carry a full night of eval traffic |
 
 ---
 
@@ -171,7 +172,7 @@ All with `FakeLLM` scripts and a fake clock.
 | T5.2 | Check fails, refine, check passes, submit | `SUBMITTED`, 2 gate checks recorded |
 | T5.3 | Never submits | `BUDGET_EXHAUSTED(steps)` at step 30, best candidate kept |
 | T5.4 | Next call would cross the per-bug token ceiling | `BUDGET_EXHAUSTED(tokens)`, no call made after the refusal |
-| T5.5 | 25 min of active time on the fake clock; separately, 50 min of rate-limit waits plus 10 min active; separately, 60 min total including waits | First: `BUDGET_EXHAUSTED(wall_clock)`. Second: keeps running (waits excluded). Third: `BUDGET_EXHAUSTED(hard_cap)`. |
+| T5.5 | 25 min of active time on the fake clock; separately, 100 min of rate-limit waits and model response time plus 10 min active; separately, 120 min total including waits | First: `BUDGET_EXHAUSTED(wall_clock)`. Second: keeps running (waits excluded). Third: `BUDGET_EXHAUSTED(hard_cap)`. |
 | T5.6 | Ninth `check` | `BUDGET_EXHAUSTED(gate_checks)` |
 | T5.7 | Five tool errors in a row | Stop with reason `tool_errors` |
 | T5.8 | Same action three times | Nudge injected after the third; stop on the fourth |

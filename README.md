@@ -65,7 +65,7 @@ flowchart LR
 
 1. **Sandbox.** Every command runs in a Docker container with no network, capped memory, CPU and PIDs, and timeouts. API keys never enter it.
 2. **Agent loop.** One model, six tools, hard limits on steps, tokens, wall clock, and gate checks. The budget check happens before each call, so a ceiling is never exceeded. Old context is trimmed to stubs so every prompt stays under 32K tokens.
-3. **Free-tier router.** One OpenAI-compatible client over Mistral, Gemini and OpenRouter free tiers, with rate limiting, quota tracking, and failover. Eval runs never switch models mid-run.
+3. **Free-tier router.** One OpenAI-compatible client over NVIDIA's free endpoints, Gemini and OpenRouter free tiers, with rate limiting, quota tracking, and failover. Eval runs never switch models mid-run.
 4. **Online gate (no fix needed).** The test must touch only test files, be collected, fail on the buggy code, fail for the right reason, fail the same way 3 times out of 3, and actually execute the code under test.
 5. **Oracle (needs the fix).** Apply the real fix on a clean checkout. The test must pass 3 times out of 3.
 6. **It cannot fake success.** Verification never runs in the agent's workspace. Only a diff that adds test code is carried to a clean checkout. The agent never sees the oracle's result.
@@ -84,7 +84,7 @@ pip install -e ".[dev]"
 pytest -m "not docker and not live_llm"     # hermetic suite, no Docker or API key needed
 
 repro fixtures check                         # toy bugs: fail before, pass after
-repro run --repo PATH --issue ISSUE.md       # needs Docker and at least one free API key (MISTRAL_API_KEY)
+repro run --repo PATH --issue ISSUE.md       # needs Docker and at least one free API key (NVIDIA_API_KEY)
 ```
 
 The benchmark runs in GitHub Actions in resumable nightly batches (free on public repos), or on any x86_64 Linux machine with Docker. Steps are in [MILESTONES.md](MILESTONES.md) under E0 to E3.

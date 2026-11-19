@@ -58,7 +58,7 @@ Checked on 2026-11-16 and 2026-11-17, not assumed.
 
    | Need | Revision 1 | Revision 2 |
    |---|---|---|
-   | Model | Anthropic API, about $70 | Free tiers (Mistral, Gemini, OpenRouter) behind one router |
+   | Model | Anthropic API, about $70 | Free tiers (NVIDIA's free endpoints, Gemini, OpenRouter) behind one router |
    | Eval compute | Rented VM, about $12 | GitHub Actions standard runners (free and unlimited on public repos) |
    | Image pulls | n/a | Free Docker Hub account (higher anonymous pull limits) |
 
@@ -83,7 +83,7 @@ flowchart TD
     I["Issue text + repo at base commit"] --> LD["Loader: builds AgentView (safe fields only)"]
     LD --> AG["Agent loop (token budget, context trimming)"]
     AG <--> RT["Router: free-tier routes, rate limiter, quota store, failover"]
-    RT <--> P1["Mistral"]
+    RT <--> P1["NVIDIA free endpoints"]
     RT <--> P2["Gemini"]
     RT <--> P3["OpenRouter :free"]
     AG <--> WS["Sandbox A: agent workspace (long-lived, dirty)"]
@@ -165,7 +165,7 @@ Protocol: `start()`, `exec(cmd, timeout_s) -> ExecResult`, `put_file`, `get_file
 | Mounts | none from host, no Docker socket | The container cannot see the host or the API keys |
 | Lifetime | new container per verification run, removed after | No state carries between runs |
 | Per-command timeout | 60 s shell, 180 s test run | In-container `timeout -s KILL` plus a host watchdog that kills the container |
-| Per-instance wall clock | 25 min of active time, plus a 60 min hard cap including rate-limit waits | Hard stop. Waiting on a provider's limits does not eat the agent's budget, so a congested provider cannot lower S. |
+| Per-instance wall clock | 25 min of active time, plus a 120 min hard cap including all waits | Hard stop. Waiting on a provider (rate-limit waits and model response time) does not eat the agent's budget, so a congested or slow provider cannot lower S. |
 | Output cap | 16 KB per command, head and tail kept | Protects the context budget |
 | Cleanup | every container labelled `repro.run_id`; a reaper removes leftovers at start and exit | No leaked containers after a crash |
 | Disk | after each instance, remove its image and run `docker system prune` | Actions runners have about 14 GB of SSD (more after freeing preinstalled tools) |
@@ -228,23 +228,28 @@ Per-test transitions are recorded (F→P, F→F, P→P, P→F, E→x). An instan
 
 This replaces revision 1's single Anthropic client and dollar ledger.
 
-#### Providers (as checked 2026-11-17; M3 re-checks each on the live Limits pages before any run)
+#### Providers (as checked 2026-11-19; M3 re-checks each before any run)
 
-| Provider | Free terms | Limits as reported | Role |
+| Provider | Free terms | Limits as measured or reported | Role |
 |---|---|---|---|
-| Mistral (free mode, formerly "Experiment") | No card. May train on prompts by default; an opt-out toggle exists in the admin panel. | 1 request/s, 500K tokens/min, 1B tokens/month (Mistral help centre). Per-model. | **Primary.** The only tier with enough volume to carry the eval alone. |
-| Google Gemini API (AI Studio free tier) | No card. Free-tier prompts may be used to improve Google products. | Google no longer publishes free limits; they are shown per project in AI Studio. Third-party reports range from 20 requests/day on the newest Flash to several hundred on Flash-Lite. Daily reset at midnight Pacific. | Secondary fallback and an optional cross-model ablation. Low volume. |
-| OpenRouter `:free` models | No card. | 20 requests/min and **50 requests/day for the whole account** (1,000/day only after a one-time $10 purchase). The free model list changes often. | Last-resort fallback. About one agent run per day at most. |
-| Cerebras | **No permanent free tier** per Cerebras's own docs. Free Trial needs a verified payment method, gives $5 of credit, expires in 30 days. | Trial: `gpt-oss-120b` at 5 requests/min, 1M tokens/day. | Supported by the client but **off by default**. Turn it on only if I add a card for the trial. |
+| NVIDIA API catalog (build.nvidia.com, `integrate.api.nvidia.com/v1`) | No card; phone verification. Free endpoints are for development and testing, not production. | No published per-day limits and no rate-limit headers. Community reports put the cap at about 40 requests/min per account. Measured on `mistralai/mistral-large-4-1t-a52b` (2026-11-19, two probe runs, 78 requests): all succeeded; a 9K-token prompt took 16 s; agent-sized calls took 22 s median, 100 s worst; 3 parallel calls had no 429s but one took 144 s. Other free models (Kimi K3.1 Pro, GLM 5.3 Flash) were overloaded: timeouts and 429s. | **Primary**, pinned for every headline run. |
+| Google Gemini API (AI Studio free tier) | No card. Free-tier prompts may be used to improve Google products. | Not published by Google; shown per project in AI Studio. Reports put Flash at about 20 requests/day and Flash-Lite at about 500/day. Daily reset at midnight Pacific. | Dev fallback and the optional cross-model ablation. |
+| OpenRouter `:free` models | No card. | 20 requests/min and **50 requests/day for the whole account** (1,000/day only after a one-time $10 purchase). | Last-resort fallback. |
 
-Takeaway: Mistral carries the eval. The others add resilience for dev and demo runs, and give a second model for an optional comparison. Capacity check against Mistral alone: the whole plan needs about 80M tokens (section 8), which is about 8% of one month's 1B. The binding limit is 500K tokens/min, which allows about 15 agent calls/min at 32K-token prompts. That is enough for 6 parallel workers. The real bottleneck is Docker time, not tokens.
+Checked and ruled out on 2026-11-19:
+- **Mistral (direct):** the free API plan is gone; enabling API keys now asks for prepaid credits (checked in the console). Mistral Large 4 is still reachable for free through NVIDIA.
+- **Cerebras:** no renewing free tier; the trial needs a payment method.
+- **Groq:** free, but 8K tokens/min and 200K tokens/day per model, so a single agent prompt (about 11K tokens) exceeds the per-minute limit.
+- **GitHub Models:** free, but 8K input tokens per request, too small for the agent's context.
+
+Takeaway: NVIDIA's free endpoint carries the eval. The plan needs about 7,000 requests and 80M tokens (section 8). At about 40 requests/min, request volume is not the limit. Response time is: about 45 s per call on average, so the eval is paced by model latency and Docker time. Two unknowns are settled in M3 before any eval run: whether there is a hidden daily cap (a one-night soak test), and how to handle the model's reasoning tokens (see below).
 
 #### Logical models and routes
 
 - A **route** is one (provider, exact model version string, base URL, API key env var) with its limits, capabilities (context window, max output, system-role support), and reset rules. Routes live in `config/routes.yaml`, not in code.
-- A **logical model** is a name the configs use (for example `primary`). It maps to one or more routes **that serve the same model weights and version**, for example a Mistral open-weights model served by Mistral and also by OpenRouter.
+- A **logical model** is a name the configs use (for example `primary`). It maps to one or more routes **that serve the same model weights and version**, for example the same open-weights model served by NVIDIA and by OpenRouter.
 - Exact version strings are pinned. `-latest` aliases are refused for eval configs, because they can change under a running eval.
-- The primary model is chosen in M3 from what Mistral's free mode actually lists. Preference order: Mistral's agentic coding model (Devstral family), then Mistral Medium, then Mistral Small. The choice and its exact ID go into `DECISIONS.md`.
+- **Primary model: `mistralai/mistral-large-4-1t-a52b` on NVIDIA** (decided 2026-11-19, DECISIONS D-E0-3). It is a reasoning model: in the probes it spent almost all of a 300-token output limit on reasoning tokens. M3 decides between raising the output cap to 8K tokens and lowering reasoning effort, if the API allows it, and records the result. Preference list if the primary has to be replaced (EVAL section 5): `nvidia/nemotron-3-ultra-550b-a55b`, then `poolside/laguna-xs-2.1`, then Gemini Flash-Lite. Each is checked in M3's live smoke test before use.
 
 #### One client
 
@@ -269,7 +274,7 @@ Free routes differ in whether and how they support native tool calling, especial
 | Policy | Used for | Behaviour |
 |---|---|---|
 | `pinned` | All headline eval configs | Only routes of the same logical model. Transient error: back off and retry, then try the next same-model route. Quota exhausted on every route: wait if the reset is under 10 minutes, otherwise **defer** the instance (section 5.9). Never switches to a different model. |
-| `chain` | Dev runs, demo, product mode | Ordered list across models, default Mistral → Gemini Flash → OpenRouter `:free` (→ Cerebras if on). Switches on exhaustion or a tripped circuit breaker. A run served by more than one model is tagged `mixed`. |
+| `chain` | Dev runs, demo, product mode | Ordered list across models, default NVIDIA Mistral Large 4 → Gemini Flash-Lite → another NVIDIA model (Nemotron Ultra or Laguna) → OpenRouter `:free`. Switches on exhaustion or a tripped circuit breaker. A run served by more than one model is tagged `mixed`. |
 
 Every call records the route that served it. A `mixed` run is never reported as a headline number. The whole point of the eval is a paired comparison on one model, and `pinned` keeps it that way.
 
@@ -349,9 +354,9 @@ Trimming steps, applied in order before each call until the estimate fits:
 | Tokens per bug (in + out, all calls) | 600,000 |
 | Requests per bug | 40 |
 | Prompt tokens per call | 32,000 |
-| Output tokens per call | 2,000 |
-| Wall clock per bug, active time (rate-limit waits excluded) | 25 min |
-| Wall clock per bug, hard cap (waits included) | 60 min |
+| Output tokens per call | 8,000 (reasoning tokens count; M3 may lower it if reasoning effort can be reduced) |
+| Wall clock per bug, active time (rate-limit waits and model response time excluded) | 25 min |
+| Wall clock per bug, hard cap (waits included) | 120 min |
 | Gate checks | 8 |
 | Consecutive tool or parse errors | 5 |
 | Same action repeated | 3 (one nudge, then stop) |
@@ -411,10 +416,10 @@ The eval is built to run as many small overnight batches that can be killed at a
 | `official-score.yml` | manual | Runs the SWT-bench harness on exported predictions, one matrix job per instance |
 
 - Nightly schedule: 20:30 UTC (02:00 IST). The schedule is enabled only while a run is in progress and is removed when `repro status` reports it complete.
-- Secrets (added by me in repo settings, never pasted into chat): `MISTRAL_API_KEY`, `GEMINI_API_KEY`, `OPENROUTER_API_KEY`, optional `CEREBRAS_API_KEY`, `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`.
+- Secrets (added by me in repo settings, never pasted into chat): `NVIDIA_API_KEY`, `GEMINI_API_KEY`, `OPENROUTER_API_KEY`, and optionally `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` (not needed while the harness builds its own images, DECISIONS D-E0-1).
 - Workflows trigger only on `push` to `main`, `schedule`, and `workflow_dispatch`. Never `pull_request_target`, so no fork can reach the secrets.
 - A build session in chat can start a workflow through the GitHub REST API (`gh api .../dispatches`) and read results from the `results` branch. Eval tasks therefore need no machine of mine, only the one-time secrets setup.
-- **Public repo needed for the volume.** The whole plan needs roughly 11,000 runner-minutes (EVAL section 5). Public repos get unlimited minutes on standard runners. Private repos get 2,000 minutes/month on smaller 2-vCPU runners (3,000 with GitHub Pro from the Student Developer Pack). Default: make the repo public before M6. Fallback: run `repro eval` on my own x86_64 machine overnight with the same flags.
+- **Public repo needed for the volume.** The whole plan needs roughly 13,500 runner-minutes (EVAL section 5). Public repos get unlimited minutes on standard runners. Private repos get 2,000 minutes/month on smaller 2-vCPU runners (3,000 with GitHub Pro from the Student Developer Pack). Default: make the repo public before M6. Fallback: run `repro eval` on my own x86_64 machine overnight with the same flags.
 
 ### 5.11 CLI
 
@@ -484,9 +489,9 @@ Money spent: **$0.** The constraint is now quota and runner time.
 | Final: 2 variance reruns of the agent on 50 bugs | about 25M | about 2,300 |
 | Flaky audit + mutation (no model calls) | 0 | about 1,500 |
 | Official SWT-bench scoring, pilots, docker tests | 0 | about 1,300 |
-| **Total** | **about 80M (about 8% of one month of Mistral's 1B)** | **about 11,000** |
+| **Total** | **about 80M (no published token cap on the primary; checked by the M3 soak test)** | **about 13,500** |
 
-Assumptions: about 250K tokens per agent run (ceiling 600K), about 23 runner-minutes per agent unit including image pull, and 6 shards in parallel within Mistral's tokens/min limit. That puts the final run at about 4 nights and the whole project at about 2 weeks of nightly batches. The measured figures replace these in the README.
+Assumptions: about 250K tokens and 25 requests per agent run (ceilings 600K and 40), about 7,000 requests in total, and about 45 s per model response (measured median 22 s with spikes past 2 minutes on the free endpoint). That is about 90 hours of model time, about 15 hours across 6 shards. Slow responses add about 10 runner-minutes per agent unit, which raised the runner-minute total from 11,000 to about 13,500 (2026-11-19). The final run still fits in about 4 nights and the whole project in about 2 weeks of nightly batches. The measured figures replace these in the README.
 
 ## 9. v2: GitHub App (design only)
 
@@ -499,7 +504,8 @@ Assumptions: about 250K tokens per agent run (ceiling 600K), about 23 runner-min
 
 ## 10. Open items to settle in the first sessions
 
-- Which Mistral model the free mode actually offers, its exact version string, and whether the training opt-out keeps free access. Decided in M3 from the live Limits page.
-- Real Gemini free limits for this project, read from AI Studio in M3. If Flash is down at about 20 requests/day, the cross-model ablation is dropped.
-- Whether the SWT-bench harness's image builds fit on a free Actions runner. Found out in E0 (`bootstrap.yml`). If not, the oracle uses prebuilt SWE-bench images from Docker Hub, and the official harness scores only the instances it can (RISKS R12).
+- Whether NVIDIA's free endpoint has a hidden daily cap, and how stable Mistral Large 4's latency is over a whole night. Settled by M3's soak test before any eval run.
+- How to handle Mistral Large 4's reasoning tokens: 8K output cap, or lower reasoning effort if the API supports it. Settled in M3.
+- Real Gemini free limits for this project, read from AI Studio in M3. If Flash-Lite is well under about 400 requests/day, the cross-model ablation is dropped.
 - Repo visibility: public before M6 (default), or private with a cut eval. My call.
+- Settled in E0 (2026-11-19): the SWT-bench harness builds its images on a free runner (DECISIONS D-E0-1).

@@ -33,7 +33,7 @@ The eval pipeline is complete at the end of M4, one milestone before the agent e
 
 M6 can be pulled forward to right after M2 if I want the Docker risk retired early.
 
-**Repo visibility decision, needed before M6.** The plan needs about 11,000 Actions minutes (EVAL section 5). Public repos get unlimited free minutes on standard runners; private repos get 2,000 per month. Default: make the repo public before M6. Until then everything fits in the private allowance.
+**Repo visibility decision, needed before M6.** The plan needs about 13,500 Actions minutes (EVAL section 5). Public repos get unlimited free minutes on standard runners; private repos get 2,000 per month. Default: make the repo public before M6. Until then everything fits in the private allowance.
 
 ## How every session runs
 
@@ -108,16 +108,17 @@ After each session, my own part: read the code, and be able to answer the "expla
 **Goal:** free accounts and keys in place, and proof that the benchmark harness runs on a free GitHub runner.
 
 1. Create free accounts and API keys. No card needed for any of these:
-   - **Mistral** (console.mistral.ai): create an API key. Optional: in the admin panel's privacy settings, try turning off training on API data. If that takes the account out of free mode, turn it back on; the benchmark repos are public code anyway.
+   - **NVIDIA** (build.nvidia.com): sign up (phone verification, no card), then Settings → API Keys → create a key. This is the primary model provider.
    - **Google AI Studio** (aistudio.google.com): "Get API key". Note the free limits it shows for the Flash and Flash-Lite models.
    - **OpenRouter** (openrouter.ai): create a key. Do not buy credits.
-   - **Docker Hub** (hub.docker.com): free account, then a read-only personal access token.
+   - **Docker Hub** (hub.docker.com), optional: free account, then a read-only personal access token. Only needed if the harness has to pull prebuilt images.
    - **Cerebras: skip.** Its trial needs a payment method and expires after 30 days.
+   - **Mistral: skip.** Its free API plan now asks for prepaid credits (checked 2026-11-19).
 2. Put the keys into the repo as Actions secrets. On my laptop, with the GitHub CLI installed (`gh`); each command prompts for the value, so keys never go into a chat:
 
 ```bash
 gh auth login
-gh secret set MISTRAL_API_KEY    --repo jsm05/repro
+gh secret set NVIDIA_API_KEY     --repo jsm05/repro
 gh secret set GEMINI_API_KEY     --repo jsm05/repro
 gh secret set OPENROUTER_API_KEY --repo jsm05/repro
 gh secret set DOCKERHUB_USERNAME --repo jsm05/repro
@@ -134,7 +135,7 @@ gh workflow run bootstrap.yml --repo jsm05/repro
 gh run watch --repo jsm05/repro
 ```
 
-4. Send the next chat session the free limits shown on Mistral's Limits page and in AI Studio. The chat cannot see those pages; M3 puts them into `config/routes.yaml`.
+4. Send the next chat session the free limits shown in AI Studio. The chat cannot see that page; M3 puts them into `config/routes.yaml`. NVIDIA shows no limits page; its behaviour was measured with two probe scripts (DECISIONS D-E0-3).
 
 5. When ready (before M6): make the repo public.
 
@@ -143,10 +144,10 @@ gh repo edit jsm05/repro --visibility public --accept-visibility-change-conseque
 ```
 
 **Done when**
-- [ ] `gh secret list` shows the five secrets
-- [ ] `bootstrap.yml` reports the gold instance as resolved
-- [ ] `eval/samples/verified_ids.txt` committed with 433 ids, and `eval/box-notes.md` committed
-- [ ] Decision recorded in `DECISIONS.md`: did the SWT-bench harness's image build fit on the runner? If not, the sandbox and oracle use prebuilt SWE-bench images from Docker Hub (RISKS R12)
+- [x] Repo secrets set: `NVIDIA_API_KEY`, `GEMINI_API_KEY`, `OPENROUTER_API_KEY` (Docker Hub optional)
+- [x] `bootstrap.yml` reports the gold instance as resolved
+- [x] `eval/samples/verified_ids.txt` committed with 433 ids, and `eval/box-notes.md` committed
+- [x] Decision recorded in `DECISIONS.md`: did the SWT-bench harness's image build fit on the runner? If not, the sandbox and oracle use prebuilt SWE-bench images from Docker Hub (RISKS R12)
 
 ---
 
@@ -179,7 +180,7 @@ gh repo edit jsm05/repro --visibility public --accept-visibility-change-conseque
 **Goal:** model calls go through one OpenAI-compatible client to free routes, with rate limiting, quota tracking, failover, and hard token ceilings. All of it is tested with no network. Two baselines produce candidates.
 
 **Build**
-- `config/routes.yaml`: Mistral, Gemini, OpenRouter, and Cerebras (disabled) routes with base URLs, exact model version strings, capability flags, published or observed limits, reset rules, `trains_on_data` flag, and a `verified_on` date. Filled from the limits I send at the start of this session (E0 step 4).
+- `config/routes.yaml`: NVIDIA (primary Mistral Large 4, plus the backup models in DESIGN 5.5), Gemini, and OpenRouter routes with base URLs, exact model version strings, capability flags, published or observed limits, reset rules, `trains_on_data` flag, and a `verified_on` date. Filled from the AI Studio limits I send at the start of this session (E0 step 4) and the NVIDIA probe results (DECISIONS D-E0-3).
 - `registry.py`: logical models mapped to same-weights routes. `-latest` aliases refused in eval configs.
 - `OpenAICompatClient`: the `openai` SDK with `base_url` per route, `max_retries=0`, raw headers exposed.
 - `errors.py`: table-driven classifier (provider, status, body pattern) → rate limit, quota exhausted, transient, context length, bad request, auth, empty output. Tested on recorded error samples.
@@ -191,8 +192,9 @@ gh repo edit jsm05/repro --visibility public --accept-visibility-change-conseque
 - `FakeProvider` (an in-process HTTP stub that can be told to return 429s, quota errors, 5xx, timeouts, context-length errors), `FakeLLM`, `CassetteLLM`.
 - BM25 retrieval fitted to the prompt cap. B0 (single prompt) and B1 (pass@5 with the online gate).
 - `repro llm routes | ping | quota`.
-- `.github/workflows/live-smoke.yml` (manual): one tiny call per enabled route; lists the models each key can see (Mistral's model list endpoint), prints observed rate-limit headers; commits a short `eval/live-smoke.md`.
-- Choose the primary logical model per DESIGN 5.5 from what Mistral's free mode lists. Record the exact ID in `DECISIONS.md`.
+- `.github/workflows/live-smoke.yml` (manual): one tiny call per enabled route; lists the models each key can see (the providers' model list endpoints), prints observed rate-limit headers; commits a short `eval/live-smoke.md`.
+- `.github/workflows/soak.yml` (manual): about 500 requests of mixed sizes to the primary route over one night; reports success rate, latency p50 and p95, 429s, timeouts, and any quota errors; commits `eval/soak.md`.
+- The primary is fixed: `mistralai/mistral-large-4-1t-a52b` on NVIDIA (DECISIONS D-E0-3). Decide how to handle its reasoning tokens: 8K output cap, or lower reasoning effort if the API supports it. Record the result in `DECISIONS.md`.
 
 If this session runs long, B1 moves to M4. Nothing else moves.
 
@@ -206,6 +208,7 @@ If this session runs long, B1 moves to M4. Nothing else moves.
 - [ ] B0 and B1 produce candidates on fixtures with `FakeLLM`, and those go through gate and oracle
 - [ ] Record-then-replay through `CassetteLLM` gives byte-identical results
 - [ ] `live-smoke.yml` run green in Actions: every enabled route answered, and the ledger's token counts match what each provider reported (T3.L1)
+- [ ] `soak.yml` run for one night: no hidden daily cap on the primary, or the plan adjusted and recorded (T3.L2)
 
 **Explain it:** Why check the budget before the call instead of after? Why may the eval never fail over to a different model? How does the router tell a per-minute limit from a daily quota, and why does it matter? Why a text action protocol instead of native tool calls?
 
