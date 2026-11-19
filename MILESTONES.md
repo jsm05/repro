@@ -201,12 +201,12 @@ If this session runs long, B1 moves to M4. Nothing else moves.
 **Not in M3:** the agent loop, context trimming (M5).
 
 **Done when**
-- [ ] Property test: no sequence of calls can push tokens past a ceiling (T3.3)
-- [ ] Failover tests against `FakeProvider` pass for every error class (T3.15 to T3.22)
-- [ ] `pinned` never switches models; `chain` does and tags the run `mixed` (T3.18, T3.19)
-- [ ] Quota state survives a restart and resets at the right boundary per provider (T3.20)
-- [ ] B0 and B1 produce candidates on fixtures with `FakeLLM`, and those go through gate and oracle
-- [ ] Record-then-replay through `CassetteLLM` gives byte-identical results
+- [x] Property test: no sequence of calls can push tokens past a ceiling (T3.3)
+- [x] Failover tests against `FakeProvider` pass for every error class (T3.15 to T3.22)
+- [x] `pinned` never switches models; `chain` does and tags the run `mixed` (T3.18, T3.19)
+- [x] Quota state survives a restart and resets at the right boundary per provider (T3.20)
+- [x] B0 and B1 produce candidates on fixtures with `FakeLLM`, and those go through gate and oracle
+- [x] Record-then-replay through `CassetteLLM` gives byte-identical results
 - [ ] `live-smoke.yml` run green in Actions: every enabled route answered, and the ledger's token counts match what each provider reported (T3.L1)
 - [ ] `soak.yml` run for one night: no hidden daily cap on the primary, or the plan adjusted and recorded (T3.L2)
 

@@ -74,3 +74,32 @@ What changes in the plan: the provider table and chain order (DESIGN 5.5); outpu
 
 **D-E0-4. Secrets in the repo.**
 `NVIDIA_API_KEY`, `GEMINI_API_KEY` and `OPENROUTER_API_KEY` added in repo settings. No `MISTRAL_API_KEY`. Docker Hub secrets optional (D-E0-1).
+
+## 2026-11-20, M3
+
+**D-M3-1. The rate limiter uses sliding windows, not token buckets.**
+A bucket of capacity C that refills C per minute lets up to 2C through in one 60-second window: a full bucket plus a minute of refill. Six shards each holding 1/6 of a limit could then send twice the limit together. A sliding window bounds every window exactly, which the static shard split (T3.21) needs.
+
+**D-M3-2. Token estimates fall back to one token per 3 characters when tiktoken's encoding cannot be downloaded.**
+The chat workspace cannot reach tiktoken's download host. CI and Actions can. The fallback overestimates code, so ceilings stay safe. The per-route correction factor then pulls estimates toward reported usage either way. Tests inject the counter, so the hermetic suite never needs the download.
+
+**D-M3-3. What is verified in `config/routes.yaml` and what is not.**
+Verified: the primary's model id and behaviour (two probes, D-E0-3). Not verified yet: the Gemini Flash-Lite model id and limits (third-party reports, waiting for AI Studio numbers); the NVIDIA backups (listed by the key, never called); context windows (131072 assumed, prompts are capped at 32K anyway). OpenRouter is disabled until a current `:free` model is picked from the smoke report. NVIDIA routes are marked `trains_on_data: true` because the free endpoint's terms are unclear, so `private_code` refuses them. NVIDIA's cap of about 40 requests/min is per account, but the limiter counts per route; that is fine while one NVIDIA route serves at a time, which `pinned` guarantees.
+
+**D-M3-4. Error samples are reconstructed, not captured.**
+`tests/fixtures/llm_errors.json` follows each provider's documented error format; none are live captures. Added from writing them: Gemini reports a bad API key as HTTP 400, so a 400 mentioning an invalid key is classed as auth, not a bad request.
+
+**D-M3-5. Retry and circuit-breaker details.**
+A 5xx or timeout gets up to 5 retries with waits of about 1, 2, 4, 8 and 16 s (plus or minus 20% jitter), so 6 attempts, then failover. "Three in a row" means three calls in a row that used up those retries on the same route; the breaker then skips the route for 10 minutes, after which it is tried again. A per-minute 429 waits for Retry-After (or the body's "retry in Ns") up to 60 s; longer waits are treated like a short quota reset.
+
+**D-M3-6. Reasoning effort is a route setting; the choice waits for live data.**
+The client sends `reasoning_effort` when a route sets it. `repro llm smoke` calls every reasoning route twice, at the default and at `low`, and reports both reasoning-token counts. The primary keeps an 8K output cap until the smoke and soak reports show whether `low` is accepted and helps (RISKS R32).
+
+**D-M3-7. Baseline details.**
+B0 asks for exactly one fenced block with `path=` and `mode=new|append`; anything else is NO_TEST. Answers that point outside test paths or at source files are rejected before the gate. B1 lives in `baseline/pass_at_k.py` (the layout's name), draws all k samples first, then gates them in order and stops at the first pass.
+
+**D-M3-8. Live workflows are started by me.**
+This chat cannot start workflows: the dispatch API returns 403 through its proxy. `live-smoke.yml` and `soak.yml` are started from the Actions tab. They commit their reports as `github-actions[bot]`, like `bootstrap.yml`.
+
+**D-M3-9. The router tracks waiting separately from working.**
+`rate_limit_wait_s` (limiter and 429 waits) and `model_wait_s` (model response time) are kept per router, so M5's 25-minute active-time budget can leave both out (D-E0-3).
