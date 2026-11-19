@@ -1,0 +1,8 @@
+# Paid list prices (USD per million tokens) for the models in config/routes.yaml.
+# Used only for the report's "would have cost" column; actual spend is $0.
+# null = not yet looked up. Fill in from each provider's pricing page before M9's report.
+models:
+  mistralai/mistral-large-4-1t-a52b: null
+  nvidia/nemotron-3-ultra-550b-a55b: null
+  poolside/laguna-xs-2.1: null
+  gemini-3.5-flash-lite: null
