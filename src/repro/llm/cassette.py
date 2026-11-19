@@ -1,0 +1,88 @@
+"""Record real model responses and replay them later with no network.
+
+Requests are keyed by a hash of their content. The same request may legitimately be
+made several times (B1 draws 5 samples from one prompt), so each key holds a list
+of responses replayed in order. Replay never falls through to a live call: a request
+with no recording is an error.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+from collections import defaultdict
+from collections.abc import Sequence
+from pathlib import Path
+from typing import Any, Literal
+
+from repro.llm.types import LLM, LLMResponse, Message
+
+
+class CassetteMiss(LookupError):
+    pass
+
+
+def request_key(
+    messages: Sequence[Message], max_tokens: int, temperature: float, stop: Sequence[str] | None
+) -> str:
+    payload = {
+        "messages": [{"role": m["role"], "content": m["content"]} for m in messages],
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+        "stop": list(stop) if stop else None,
+    }
+    return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
+
+
+class CassetteLLM:
+    def __init__(
+        self,
+        path: str | Path,
+        mode: Literal["record", "replay"],
+        inner: LLM | None = None,
+    ):
+        if mode == "record" and inner is None:
+            raise ValueError("record mode needs an inner LLM")
+        self.path = Path(path)
+        self.mode = mode
+        self.inner = inner
+        self._recorded: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        self._cursor: dict[str, int] = defaultdict(int)
+        if mode == "replay":
+            for line in self.path.read_text().splitlines():
+                if line.strip():
+                    rec = json.loads(line)
+                    self._recorded[rec["key"]].append(rec["response"])
+
+    def complete(
+        self,
+        messages: Sequence[Message],
+        *,
+        max_tokens: int,
+        temperature: float = 0.0,
+        stop: Sequence[str] | None = None,
+    ) -> LLMResponse:
+        key = request_key(messages, max_tokens, temperature, stop)
+        if self.mode == "replay":
+            responses = self._recorded.get(key, [])
+            i = self._cursor[key]
+            if i >= len(responses):
+                raise CassetteMiss(
+                    f"no recorded response for request {key[:12]} (call {i + 1}); "
+                    "replay mode never calls a provider"
+                )
+            self._cursor[key] += 1
+            return LLMResponse.model_validate(responses[i])
+        assert self.inner is not None
+        resp = self.inner.complete(messages, max_tokens=max_tokens, temperature=temperature,
+                                   stop=stop)
+        record = {
+            "key": key,
+            "request": {"messages": [dict(m) for m in messages], "max_tokens": max_tokens,
+                        "temperature": temperature, "stop": list(stop) if stop else None},
+            "response": resp.model_dump(),
+        }
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with self.path.open("a") as f:
+            f.write(json.dumps(record, sort_keys=True) + "\n")
+        return resp
