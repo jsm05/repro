@@ -16,6 +16,7 @@ import openai
 
 from repro.llm.errors import ErrorClass, LLMError, classify, retry_after_seconds
 from repro.llm.registry import Registry, Route
+from repro.llm.secrets import read_key, redact
 from repro.llm.types import LLMResponse, Message
 
 
@@ -29,6 +30,8 @@ class OpenAICompatClient:
         http_client: Any = None,
     ):
         self.route = route
+        api_key = api_key.strip()
+        self._secrets = (api_key,)
         kwargs: dict[str, Any] = {
             "base_url": base_url,
             "api_key": api_key,
@@ -92,6 +95,7 @@ class OpenAICompatClient:
             resp = raw.parse()
         except openai.APIStatusError as exc:
             body = exc.response.text if exc.response is not None else str(exc.body)
+            body = redact(body, self._secrets)
             headers = dict(exc.response.headers) if exc.response is not None else {}
             raise LLMError(
                 classify(provider, exc.status_code, body),
@@ -102,7 +106,8 @@ class OpenAICompatClient:
                 headers=headers,
             ) from None
         except (openai.APITimeoutError, openai.APIConnectionError) as exc:
-            raise LLMError(ErrorClass.TRANSIENT, type(exc).__name__, provider=provider) from None
+            detail = redact(f"{type(exc).__name__}: {exc}", self._secrets)
+            raise LLMError(ErrorClass.TRANSIENT, detail, provider=provider) from None
         latency = time.monotonic() - start
         choice = resp.choices[0] if resp.choices else None
         text = (choice.message.content or "") if choice is not None else ""
@@ -132,7 +137,7 @@ def make_client_factory(
     def factory(route: Route) -> OpenAICompatClient:
         if route.id not in cache:
             prov = registry.provider(route)
-            key = env.get(prov.api_key_env, "")
+            key = read_key(env, prov.api_key_env)
             if not key:
                 raise LLMError(
                     ErrorClass.AUTH, f"{prov.api_key_env} is not set", provider=route.provider

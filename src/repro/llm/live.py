@@ -25,6 +25,7 @@ from repro.llm.budget import Ledger, LedgerEntry
 from repro.llm.client import OpenAICompatClient
 from repro.llm.errors import LLMError
 from repro.llm.registry import Registry, Route
+from repro.llm.secrets import known_secrets, read_key, redact
 from repro.llm.types import LLMResponse
 
 CODE_LINE = "def handler(request):\n    value = parse(request.body)\n    return value\n"
@@ -79,22 +80,23 @@ def smoke(
     run_id: str = "smoke",
 ) -> SmokeReport:
     env = env if env is not None else os.environ
+    secrets = known_secrets(registry, env)
     report = SmokeReport()
     for name, prov in registry.data.providers.items():
-        key = env.get(prov.api_key_env, "")
+        key = read_key(env, prov.api_key_env)
         if not key:
             report.model_errors[name] = f"{prov.api_key_env} not set"
             continue
         try:
             report.models[name] = list_models(prov.base_url, key)
         except Exception as exc:  # report, don't crash the smoke run
-            report.model_errors[name] = f"{type(exc).__name__}: {str(exc)[:200]}"
+            report.model_errors[name] = redact(f"{type(exc).__name__}: {str(exc)[:200]}", secrets)
     messages = [{"role": "user", "content": "Reply with the single word OK."}]
     for route in registry.routes.values():
         if not route.enabled:
             continue
         prov = registry.provider(route)
-        key = env.get(prov.api_key_env, "")
+        key = read_key(env, prov.api_key_env)
         if not key:
             report.checks.append(RouteCheck(route.id, route.model, False, "no API key"))
             continue
@@ -102,7 +104,9 @@ def smoke(
         try:
             resp = client.complete(messages, max_tokens=512)
         except LLMError as exc:
-            report.checks.append(RouteCheck(route.id, route.model, False, str(exc)[:300]))
+            report.checks.append(
+                RouteCheck(route.id, route.model, False, redact(str(exc)[:300], secrets))
+            )
             continue
         ledger.append(entry_for(route, resp, run_id))
         recorded = [e for e in ledger.read()[0] if e.run_id == run_id and e.route_id == route.id]
@@ -122,7 +126,7 @@ def smoke(
                 )
                 check.low_effort_reasoning_tokens = low_resp.reasoning_tokens
             except LLMError as exc:
-                check.detail += f"; reasoning_effort=low refused: {str(exc)[:120]}"
+                check.detail += "; reasoning_effort=low refused: " + redact(str(exc)[:120], secrets)
         report.checks.append(check)
     return report
 
@@ -177,7 +181,8 @@ def soak(
     env = env if env is not None else os.environ
     route = registry.routes[route_id]
     prov = registry.provider(route)
-    client = OpenAICompatClient(route, prov.base_url, env[prov.api_key_env], timeout_s=300)
+    client = OpenAICompatClient(route, prov.base_url, read_key(env, prov.api_key_env),
+                                timeout_s=300)
     interval = hours * 3600 / max(requests, 1)
     sizes = ["small", "medium", "medium", "large"]
     samples: list[SoakSample] = []
@@ -236,7 +241,10 @@ def soak_markdown(route_id: str, samples: list[SoakSample], when: str) -> str:
     return "\n".join(line for line in lines if line is not None) + "\n"
 
 
-def write_report(path: str | Path, text: str) -> None:
+def write_report(path: str | Path, text: str, secrets: list[str]) -> str:
+    """Write a report with every known key redacted; returns the text written."""
+    clean = redact(text, secrets)
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(text)
+    p.write_text(clean)
+    return clean

@@ -169,6 +169,7 @@ def llm_ping(config_path: Path, route_id: str | None) -> None:
     from repro.llm.client import OpenAICompatClient
     from repro.llm.errors import LLMError
     from repro.llm.registry import Registry
+    from repro.llm.secrets import known_secrets, redact
 
     reg = Registry.from_yaml(config_path)
     failed = 0
@@ -176,7 +177,7 @@ def llm_ping(config_path: Path, route_id: str | None) -> None:
         if not r.enabled or (route_id and r.id != route_id):
             continue
         prov = reg.provider(r)
-        key = os.environ.get(prov.api_key_env, "")
+        key = os.environ.get(prov.api_key_env, "").strip()
         if not key:
             click.echo(f"{r.id}: skipped ({prov.api_key_env} not set)")
             continue
@@ -186,7 +187,7 @@ def llm_ping(config_path: Path, route_id: str | None) -> None:
             click.echo(f"{r.id}: ok in {resp.latency_s:.1f}s, {resp.total_tokens} tokens")
         except LLMError as exc:
             failed += 1
-            click.echo(f"{r.id}: FAILED {exc}")
+            click.echo(f"{r.id}: FAILED {redact(str(exc), known_secrets(reg, os.environ))}")
     if failed:
         raise SystemExit(1)
 
@@ -200,14 +201,17 @@ def llm_ping(config_path: Path, route_id: str | None) -> None:
 def llm_smoke(config_path: Path, out: Path, ledger_path: Path) -> None:
     """Live smoke test of every enabled route; writes a markdown report (T3.L1)."""
     import datetime as dt
+    import os
 
     from repro.llm.budget import Ledger
     from repro.llm.live import smoke, smoke_markdown, write_report
     from repro.llm.registry import Registry
+    from repro.llm.secrets import known_secrets
 
-    report = smoke(Registry.from_yaml(config_path), Ledger(ledger_path))
-    write_report(out, smoke_markdown(report, dt.datetime.now(dt.UTC).isoformat(timespec="minutes")))
-    click.echo(out.read_text())
+    reg = Registry.from_yaml(config_path)
+    report = smoke(reg, Ledger(ledger_path))
+    when = dt.datetime.now(dt.UTC).isoformat(timespec="minutes")
+    click.echo(write_report(out, smoke_markdown(report, when), known_secrets(reg, os.environ)))
     if not report.all_ok:
         raise SystemExit(1)
 
@@ -222,14 +226,17 @@ def llm_smoke(config_path: Path, out: Path, ledger_path: Path) -> None:
 def llm_soak(config_path: Path, route_id: str, n: int, hours: float, out: Path) -> None:
     """Spread N requests over H hours to one route and report what happened (T3.L2)."""
     import datetime as dt
+    import os
 
     from repro.llm.live import soak, soak_markdown, write_report
     from repro.llm.registry import Registry
+    from repro.llm.secrets import known_secrets
 
-    samples = soak(Registry.from_yaml(config_path), route_id, n, hours)
+    reg = Registry.from_yaml(config_path)
+    samples = soak(reg, route_id, n, hours)
     when = dt.datetime.now(dt.UTC).isoformat(timespec="minutes")
-    write_report(out, soak_markdown(route_id, samples, when))
-    click.echo(out.read_text())
+    click.echo(write_report(out, soak_markdown(route_id, samples, when),
+                            known_secrets(reg, os.environ)))
 
 
 if __name__ == "__main__":
