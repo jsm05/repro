@@ -112,5 +112,125 @@ def verify(
         raise SystemExit(1)
 
 
+@main.group()
+def llm() -> None:
+    """Free-tier model routes: inspect, check live, measure."""
+
+
+ROUTES_OPT = click.option(
+    "--config", "config_path", type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=Path("config/routes.yaml"), show_default=True,
+)
+
+
+@llm.command("routes")
+@ROUTES_OPT
+def llm_routes(config_path: Path) -> None:
+    """List routes, logical models and chains, with validation warnings."""
+    from repro.llm.registry import ConfigError, Registry
+
+    reg = Registry.from_yaml(config_path)
+    for r in reg.routes.values():
+        state = "on " if r.enabled else "off"
+        lim = ", ".join(f"{k}={v}" for k, v in r.limits.model_dump().items() if v is not None)
+        click.echo(f"{state} {r.id:<26} {r.model:<40} {lim} verified={r.verified_on}")
+    for name, ids in reg.data.logical_models.items():
+        click.echo(f"logical {name}: {', '.join(ids)}")
+        try:
+            for w in reg.validate_for_eval(name):
+                click.echo(f"  warning: {w}")
+        except ConfigError as exc:
+            click.echo(f"  not usable in evals: {exc}")
+    for name, members in reg.data.chains.items():
+        click.echo(f"chain {name}: {' -> '.join(members)}")
+
+
+@llm.command("quota")
+@click.option("--state", type=click.Path(path_type=Path), default=Path("runs/quota_state.json"),
+              show_default=True)
+def llm_quota(state: Path) -> None:
+    """Show persisted daily and monthly quota counters."""
+    if not state.exists():
+        click.echo(f"no quota state at {state}")
+        return
+    import json
+
+    for route_id, entry in json.loads(state.read_text()).items():
+        click.echo(f"{route_id}: {entry}")
+
+
+@llm.command("ping")
+@ROUTES_OPT
+@click.option("--route", "route_id", default=None, help="Only this route (default: all enabled).")
+def llm_ping(config_path: Path, route_id: str | None) -> None:
+    """One tiny live call per enabled route (needs API keys)."""
+    import os
+
+    from repro.llm.client import OpenAICompatClient
+    from repro.llm.errors import LLMError
+    from repro.llm.registry import Registry
+
+    reg = Registry.from_yaml(config_path)
+    failed = 0
+    for r in reg.routes.values():
+        if not r.enabled or (route_id and r.id != route_id):
+            continue
+        prov = reg.provider(r)
+        key = os.environ.get(prov.api_key_env, "")
+        if not key:
+            click.echo(f"{r.id}: skipped ({prov.api_key_env} not set)")
+            continue
+        try:
+            resp = OpenAICompatClient(r, prov.base_url, key).complete(
+                [{"role": "user", "content": "Reply with OK."}], max_tokens=256)
+            click.echo(f"{r.id}: ok in {resp.latency_s:.1f}s, {resp.total_tokens} tokens")
+        except LLMError as exc:
+            failed += 1
+            click.echo(f"{r.id}: FAILED {exc}")
+    if failed:
+        raise SystemExit(1)
+
+
+@llm.command("smoke")
+@ROUTES_OPT
+@click.option("--out", type=click.Path(path_type=Path), default=Path("eval/live-smoke.md"),
+              show_default=True)
+@click.option("--ledger", "ledger_path", type=click.Path(path_type=Path),
+              default=Path("runs/smoke-ledger.jsonl"), show_default=True)
+def llm_smoke(config_path: Path, out: Path, ledger_path: Path) -> None:
+    """Live smoke test of every enabled route; writes a markdown report (T3.L1)."""
+    import datetime as dt
+
+    from repro.llm.budget import Ledger
+    from repro.llm.live import smoke, smoke_markdown, write_report
+    from repro.llm.registry import Registry
+
+    report = smoke(Registry.from_yaml(config_path), Ledger(ledger_path))
+    write_report(out, smoke_markdown(report, dt.datetime.now(dt.UTC).isoformat(timespec="minutes")))
+    click.echo(out.read_text())
+    if not report.all_ok:
+        raise SystemExit(1)
+
+
+@llm.command("soak")
+@ROUTES_OPT
+@click.option("--route", "route_id", default="nvidia/mistral-large-4", show_default=True)
+@click.option("--requests", "n", default=500, show_default=True)
+@click.option("--hours", default=5.5, show_default=True)
+@click.option("--out", type=click.Path(path_type=Path), default=Path("eval/soak.md"),
+              show_default=True)
+def llm_soak(config_path: Path, route_id: str, n: int, hours: float, out: Path) -> None:
+    """Spread N requests over H hours to one route and report what happened (T3.L2)."""
+    import datetime as dt
+
+    from repro.llm.live import soak, soak_markdown, write_report
+    from repro.llm.registry import Registry
+
+    samples = soak(Registry.from_yaml(config_path), route_id, n, hours)
+    when = dt.datetime.now(dt.UTC).isoformat(timespec="minutes")
+    write_report(out, soak_markdown(route_id, samples, when))
+    click.echo(out.read_text())
+
+
 if __name__ == "__main__":
     main()
