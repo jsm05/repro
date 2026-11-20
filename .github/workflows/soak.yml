@@ -1,7 +1,8 @@
 name: soak
 
-# Manual. Spreads N requests over H hours to one route to find hidden daily caps and
-# measure latency over a whole night (T3.L2). Commits eval/soak.md.
+# Manual. Sends up to N requests to one route within H hours to find hidden daily caps
+# and measure latency over a whole night (T3.L2). No request starts after H hours, and
+# eval/soak.md is rewritten after every request, so even a cut-off run is committed.
 
 on:
   workflow_dispatch:
@@ -15,8 +16,8 @@ on:
         default: "500"
         required: true
       hours:
-        description: "Hours to spread them over (max 5.5)"
-        default: "5.5"
+        description: "Time limit in hours (max 5)"
+        default: "5"
         required: true
 
 permissions:
@@ -45,6 +46,8 @@ jobs:
       - name: Install
         run: pip install -e ".[dev]"
       - name: Soak
+        # Below the job limit so the commit step always gets time to run.
+        timeout-minutes: 330
         run: repro llm soak --route "$ROUTE" --requests "$REQUESTS" --hours "$HOURS" --out eval/soak.md
       - name: Commit report
         if: always()
