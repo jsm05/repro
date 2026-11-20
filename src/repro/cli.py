@@ -220,23 +220,36 @@ def llm_smoke(config_path: Path, out: Path, ledger_path: Path) -> None:
 @ROUTES_OPT
 @click.option("--route", "route_id", default="nvidia/mistral-large-4", show_default=True)
 @click.option("--requests", "n", default=500, show_default=True)
-@click.option("--hours", default=5.5, show_default=True)
+@click.option("--hours", default=5.0, show_default=True,
+              help="Time limit; no new request starts after it. Keep under 5.5 in CI.")
 @click.option("--out", type=click.Path(path_type=Path), default=Path("eval/soak.md"),
               show_default=True)
 def llm_soak(config_path: Path, route_id: str, n: int, hours: float, out: Path) -> None:
-    """Spread N requests over H hours to one route and report what happened (T3.L2)."""
+    """Send up to N requests to one route within H hours and report what happened (T3.L2).
+
+    The report is rewritten after every request, so a run that gets cut off keeps
+    everything it collected."""
     import datetime as dt
     import os
 
-    from repro.llm.live import soak, soak_markdown, write_report
+    import repro.llm.live as live
     from repro.llm.registry import Registry
     from repro.llm.secrets import known_secrets
 
     reg = Registry.from_yaml(config_path)
-    samples = soak(reg, route_id, n, hours)
+    secrets = known_secrets(reg, os.environ)
     when = dt.datetime.now(dt.UTC).isoformat(timespec="minutes")
-    click.echo(write_report(out, soak_markdown(route_id, samples, when),
-                            known_secrets(reg, os.environ)))
+
+    def save(samples: list[live.SoakSample]) -> None:
+        live.write_report(out, live.soak_markdown(route_id, samples, when, status="running",
+                                                  planned=n, hours=hours), secrets)
+
+    samples = live.soak(reg, route_id, n, hours, on_sample=save)
+    status = ("finished: all requests sent" if len(samples) >= n
+              else "finished: stopped at time limit")
+    click.echo(live.write_report(out, live.soak_markdown(route_id, samples, when,
+                                                         status=status, planned=n,
+                                                         hours=hours), secrets))
 
 
 if __name__ == "__main__":

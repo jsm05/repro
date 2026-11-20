@@ -17,12 +17,14 @@ import os
 import statistics
 import time
 import urllib.request
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from repro.llm.budget import Ledger, LedgerEntry
 from repro.llm.client import OpenAICompatClient
+from repro.llm.clock import Clock, RealClock
 from repro.llm.errors import LLMError
 from repro.llm.registry import Registry, Route
 from repro.llm.secrets import known_secrets, read_key, redact
@@ -177,17 +179,32 @@ def soak(
     hours: float,
     env: Mapping[str, str] | None = None,
     max_tokens: int = 2048,
+    *,
+    client: Any = None,
+    clock: Clock | None = None,
+    on_sample: Callable[[list[SoakSample]], None] | None = None,
 ) -> list[SoakSample]:
+    """Send up to `requests` calls, one every hours*3600/requests seconds, and stop at
+    the time limit even if calls run slower than that gap. No new call starts after the
+    limit, so the run ends at most one call timeout later. hours <= 0 means no limit and
+    no gap. `on_sample` gets the full list after every call so a caller can save it."""
     env = env if env is not None else os.environ
-    route = registry.routes[route_id]
-    prov = registry.provider(route)
-    client = OpenAICompatClient(route, prov.base_url, read_key(env, prov.api_key_env),
-                                timeout_s=300)
-    interval = hours * 3600 / max(requests, 1)
+    clock = clock if clock is not None else RealClock()
+    if client is None:
+        route = registry.routes[route_id]
+        prov = registry.provider(route)
+        client = OpenAICompatClient(route, prov.base_url, read_key(env, prov.api_key_env),
+                                    timeout_s=300)
+    limit_s = hours * 3600
+    interval = limit_s / max(requests, 1) if limit_s > 0 else 0.0
+    t0 = clock.now()
+    deadline = t0 + limit_s if limit_s > 0 else None
     sizes = ["small", "medium", "medium", "large"]
     samples: list[SoakSample] = []
     for i in range(requests):
-        started = time.time()
+        started = clock.now()
+        if deadline is not None and started >= deadline:
+            break
         size = sizes[i % len(sizes)]
         try:
             resp = client.complete([{"role": "user", "content": _prompt(size, i)}],
@@ -197,14 +214,27 @@ def soak(
                                       resp.reasoning_tokens, resp.finish_reason))
         except LLMError as exc:
             samples.append(SoakSample(started, size, False, exc.cls.value, exc.status,
-                                      time.time() - started))
-        time.sleep(max(0.0, interval - (time.time() - started)))
+                                      clock.now() - started))
+        if on_sample is not None:
+            on_sample(samples)
+        wait = interval - (clock.now() - started)
+        if deadline is not None:
+            wait = min(wait, deadline - clock.now())
+        clock.sleep(max(0.0, wait))
     return samples
 
 
-def soak_markdown(route_id: str, samples: list[SoakSample], when: str) -> str:
+def soak_markdown(
+    route_id: str,
+    samples: list[SoakSample],
+    when: str,
+    status: str = "finished",
+    planned: int | None = None,
+    hours: float | None = None,
+) -> str:
     ok = [s for s in samples if s.ok]
     lat = sorted(s.latency_s for s in ok)
+    t0 = samples[0].t if samples else 0.0
 
     def pct(p: float) -> str:
         return f"{lat[min(len(lat) - 1, int(p * len(lat)))]:.1f}" if lat else "n/a"
@@ -214,10 +244,19 @@ def soak_markdown(route_id: str, samples: list[SoakSample], when: str) -> str:
         if not s.ok:
             errors[s.error] = errors.get(s.error, 0) + 1
     first_fail = next((s for s in samples if not s.ok), None)
+    plan = []
+    if planned is not None:
+        plan.append(f"up to {planned} requests")
+    if hours:
+        plan.append(f"time limit {hours:g} h")
+    elapsed_h = (samples[-1].t - t0) / 3600 if samples else 0.0
     lines = [
         f"# Soak test: `{route_id}` ({when})", "",
+        f"- Status: {status}",
+        f"- Plan: {', '.join(plan)}" if plan else None,
         f"- Requests: {len(samples)}; succeeded: {len(ok)} "
-        f"({100 * len(ok) / max(len(samples), 1):.1f}%)",
+        f"({100 * len(ok) / max(len(samples), 1):.1f}%); last request started at "
+        f"{elapsed_h:.2f} h",
         f"- Latency p50 {pct(0.5)} s, p95 {pct(0.95)} s, max {lat[-1]:.1f} s" if lat
         else "- Latency: no successful requests",
         f"- Errors by class: {errors or 'none'}",
@@ -227,10 +266,11 @@ def soak_markdown(route_id: str, samples: list[SoakSample], when: str) -> str:
         f"- Replies cut off at max_tokens (finish_reason=length): "
         f"{sum(1 for s in ok if s.finish_reason == 'length')}",
         f"- Mean reasoning tokens per reply: "
-        f"{statistics.mean(s.reasoning_tokens for s in ok):.0f}" if ok else "",
+        f"{statistics.mean(s.reasoning_tokens for s in ok):.0f}" if ok else None,
     ]
     if first_fail is not None:
-        lines.append(f"- First failure at request {samples.index(first_fail) + 1}: "
+        lines.append(f"- First failure at request {samples.index(first_fail) + 1}, "
+                     f"{(first_fail.t - t0) / 3600:.2f} h in: "
                      f"{first_fail.error} (HTTP {first_fail.status})")
     lines += ["", "| Size | Count | OK | p50 s |", "|---|---|---|---|"]
     for size in ("small", "medium", "large"):
@@ -238,6 +278,18 @@ def soak_markdown(route_id: str, samples: list[SoakSample], when: str) -> str:
         g_ok = sorted(s.latency_s for s in group if s.ok)
         p50 = f"{statistics.median(g_ok):.1f}" if g_ok else "n/a"
         lines.append(f"| {size} | {len(group)} | {len(g_ok)} | {p50} |")
+    lines += ["", "| Hour | Requests | OK | 429s | Other errors | p50 s |",
+              "|---|---|---|---|---|---|"]
+    by_hour: dict[int, list[SoakSample]] = {}
+    for s in samples:
+        by_hour.setdefault(int((s.t - t0) // 3600), []).append(s)
+    for hour in sorted(by_hour):
+        group = by_hour[hour]
+        g_ok = sorted(s.latency_s for s in group if s.ok)
+        n429 = sum(1 for s in group if s.status == 429)
+        other = sum(1 for s in group if not s.ok and s.status != 429)
+        p50 = f"{statistics.median(g_ok):.1f}" if g_ok else "n/a"
+        lines.append(f"| {hour} | {len(group)} | {len(g_ok)} | {n429} | {other} | {p50} |")
     return "\n".join(line for line in lines if line is not None) + "\n"
 
 
