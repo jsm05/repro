@@ -193,7 +193,7 @@ gh repo edit jsm05/repro --visibility public --accept-visibility-change-conseque
 - BM25 retrieval fitted to the prompt cap. B0 (single prompt) and B1 (pass@5 with the online gate).
 - `repro llm routes | ping | quota`.
 - `.github/workflows/live-smoke.yml` (manual): one tiny call per enabled route; lists the models each key can see (the providers' model list endpoints), prints observed rate-limit headers; commits a short `eval/live-smoke.md`.
-- `.github/workflows/soak.yml` (manual): about 500 requests of mixed sizes to the primary route over one night; reports success rate, latency p50 and p95, 429s, timeouts, and any quota errors; commits `eval/soak.md`.
+- `.github/workflows/soak.yml` (manual): up to about 500 requests of mixed sizes to the primary route within a 5 h limit, saving the report after every request; reports success rate, latency p50 and p95, 429s, timeouts, and any quota errors; commits `eval/soak.md`.
 - The primary is fixed: `mistralai/mistral-large-4-1t-a52b` on NVIDIA (DECISIONS D-E0-3). Decide how to handle its reasoning tokens: 8K output cap, or lower reasoning effort if the API supports it. Record the result in `DECISIONS.md`.
 
 If this session runs long, B1 moves to M4. Nothing else moves.
