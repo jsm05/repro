@@ -128,6 +128,7 @@ All against `FakeProvider` (an in-process HTTP stub speaking the OpenAI chat com
 | T3.21 | With `--shard 2/6` every route limit is one sixth; six simulated shards running at full speed together never exceed the route limit | Static quota split is safe |
 | T3.22 | 400 context-length: trims to 75% of the route window and retries once, a second failure surfaces the error; 401 disables the route for the run | Remaining error classes handled as specified |
 | T3.23 | An eval config using a route not marked `free: true` fails validation; with `private_code: true`, any route marked `trains_on_data` is refused | No accidental paid usage; private code never goes to training tiers |
+| T3.24 | Soak loop: with calls slower than the planned gap it stops at the time limit (the last call may finish just after); fast calls keep the gap; the report is rewritten after every sample with a status line, an hourly table and keys redacted | A long soak never runs past the job limit and a cut-off run keeps its results |
 | T3.L1 | (`live_llm`, runs in `live-smoke.yml`) One small call per enabled route: it answers, the ledger's tokens equal the provider-reported usage, and the visible model list is recorded | Metering and routing match reality |
 | T3.L2 | (`live_llm`, runs in `soak.yml`) About 500 requests of mixed sizes to the primary route over one night; success rate, latency p50 and p95, 429s, timeouts and quota errors recorded in `eval/soak.md` | The primary can carry a full night of eval traffic |
 
