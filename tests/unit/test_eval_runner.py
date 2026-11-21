@@ -109,11 +109,13 @@ def test_deadline_uses_median_unit_time(tmp_path: Path) -> None:
 def test_shards_partition_exactly_and_stably() -> None:
     """T4.16: the N shards are disjoint and complete, and the split is stable."""
     ids = [f"repo__name-{i}" for i in range(300)]
-    parts = [shard_units(ids, k, 6) for k in range(6)]
+    parts = [shard_units(ids, k, 6) for k in range(1, 7)]
     flat = [i for p in parts for i in p]
     assert sorted(flat) == sorted(ids) and len(flat) == len(set(flat))
     assert all(parts)  # every shard gets work
-    assert parts == [shard_units(ids, k, 6) for k in range(6)]
+    assert parts == [shard_units(ids, k, 6) for k in range(1, 7)]
+    with pytest.raises(ValueError):
+        shard_units(ids, 0, 6)
     # Pinned value: changing the hash would silently reshuffle a run in progress.
     assert shard_of("django__django-11099", 6) == 3
 
@@ -188,16 +190,16 @@ def test_sigterm_drops_slow_unit_without_partial_row(tmp_path: Path) -> None:
 def test_second_process_on_same_shard_refuses(tmp_path: Path) -> None:
     """T4.19: a second process on the same (run, shard) refuses to start."""
     store = LocalStore(tmp_path, "r")
-    held = ShardLock(store.lock_path(0))
+    held = ShardLock(store.lock_path(1))
     held.acquire()
     with pytest.raises(LockHeld):
         runner(store, FakeExecutor()).run()
-    assert runner(store, FakeExecutor(), shard=1, shards=2).run().stop_reason == "all done"
+    assert runner(store, FakeExecutor(), shard=2, shards=2).run().stop_reason == "all done"
     held.release()
     # A lock left by a dead process is taken over.
-    store.lock_path(0).write_text("999999999")
+    store.lock_path(1).write_text("999999999")
     assert runner(store, FakeExecutor()).run().stop_reason == "all done"
-    assert not store.lock_path(0).exists()
+    assert not store.lock_path(1).exists()
 
 
 def test_stop_when_exhausted(tmp_path: Path) -> None:
