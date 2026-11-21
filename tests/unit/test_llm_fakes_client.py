@@ -161,3 +161,15 @@ def test_tools_sent_only_to_native_tool_routes() -> None:
     assert [t["function"]["name"] for t in req["tools"]] == [
         "bash", "view", "write_test", "check", "submit", "abstain"]
     assert "tools" not in native.build_request(MSGS, max_tokens=5)  # baselines send none
+
+
+def test_tool_call_with_nested_args_is_unwrapped() -> None:
+    """D-M5-14: a tool call whose arguments nest our {"args": {...}} format is unwrapped."""
+    from types import SimpleNamespace
+
+    from repro.llm.client import action_from_tool_call
+
+    call = SimpleNamespace(function=SimpleNamespace(name="view",
+                                                    arguments='{"args": {"path": "a.py"}}'))
+    assert action_from_tool_call(call) == (
+        '```action\n{"tool": "view", "args": {"path": "a.py"}}\n```')
