@@ -98,3 +98,37 @@ def test_cli_refuses_unbuilt_dataset(bad: str, tmp_path: Path) -> None:
     res = CliRunner().invoke(main, ["eval", "--config", str(cfg), "--run-id", "x",
                                     "--results-dir", str(tmp_path)])
     assert res.exit_code != 0 and "arrives in M6" in res.output
+
+
+def test_record_then_replay_in_order(tmp_path: Path) -> None:
+    """M5: a recorded agent run replays from its cassette (order match) to the same row."""
+    from repro.eval.llm_setup import cassette_factory, recording
+
+    script = [act("bash", cmd="ls"), write(), act("check"), act("submit")]
+    cas = tmp_path / "cassettes"
+    ledger = Ledger(tmp_path / "ledger.jsonl")
+    live = recording(lambda iid: LLMHandle(FakeLLM(list(script)), ledger=ledger), cas)
+    data = FixtureDataset(str(FIXTURES_ROOT))
+    rec = Executor(CFG, "rec", data, live).execute(F01).row
+    assert (cas / f"{F01}.jsonl").read_text().count("\n") == 4
+    replay = cassette_factory(cas, Ledger(tmp_path / "l2.jsonl"), "order")
+    rep = Executor(CFG, "rep", data, replay).execute(F01).row
+    assert (rep.outcome, rep.outcome_gated, rep.requests, rep.tokens) == \
+        (rec.outcome, rec.outcome_gated, rec.requests, rec.tokens) == \
+        (O.REPRODUCED, O.REPRODUCED, 4, rec.tokens)
+
+
+def test_redact_command(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """T3.14: `repro llm redact` strips configured keys from files before a commit."""
+    from click.testing import CliRunner
+
+    from repro.cli import main
+    from tests.helpers import ROOT
+
+    monkeypatch.setenv("NVIDIA_API_KEY", "nvapi-SECRET-123456789\n")
+    f = tmp_path / "cassette.jsonl"
+    f.write_text('{"error": "bad key nvapi-SECRET-123456789"}\n')
+    res = CliRunner().invoke(main, ["llm", "redact", "--config",
+                                    str(ROOT / "config" / "routes.yaml"), str(tmp_path)])
+    assert res.exit_code == 0 and "redacted 1" in res.output
+    assert "nvapi-SECRET" not in f.read_text()
