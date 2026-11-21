@@ -112,3 +112,35 @@ What happened: run 44733703044 was set to 500 requests over 5.5 h. The loop wait
 
 **D-M3-12. Live results close M3: no hidden daily cap on the primary; latency tail is heavier than planned (2026-11-21).**
 Live smoke (run 44711595086, after the key fix): all four enabled routes answered (Mistral Large 4, Nemotron 3 Ultra, Laguna XS 2.1, Gemini `gemini-3.5-flash-lite`) and every ledger count matched the provider's usage (T3.L1). The Gemini model id is now verified; its rate limits are still unverified. Soak (run 44795770595, one request at a time, 5 h limit): 275 of 275 requests succeeded, 0 429s, 0 timeouts, 0 replies cut off, mean 412 reasoning tokens per reply (T3.L2). Latency p50 35 s, p95 155 s, max 300 s (one call ran right up to the client timeout); hourly p50 ranged from 26 s to 69 s. The run averaged one request per 65 s including the planned gaps, which puts mean latency at roughly 55 s, above the 45 s the capacity plan assumes. Decisions: keep NVIDIA Mistral Large 4 as the pinned primary; keep the 300 s client timeout; leave `reasoning_effort` unset (the smoke showed no saving); keep the capacity plan for now and re-measure under real agent traffic and parallel shards in M5, since the soak never sent concurrent requests and so did not test the reported 40 RPM limit.
+
+## 2026-11-21, M4
+
+**D-M4-1. The result row stores both scoring modes and a few fields DESIGN 6 did not list.**
+`outcome` (always-emit) and `outcome_gated` replace the single `terminal_state`, so one row gives both modes with no recomputation. Added: `gate_passed`, `route_calls` (calls per route, for the route mix), `candidate_tokens_at` (cumulative tokens when the emitted candidate first existed, for the ceiling curve), `gate_rejections` per check, `retries`, `tokens_reasoning`, `kind`. `wall_clock_s` and `git_commit` are stored but never printed in the report, so the report stays byte-stable.
+
+**D-M4-2. Eval prompts count tokens with a fixed chars/3 estimator.**
+The BM25 context budget depends on the token estimator, and tiktoken is available on some machines and not others (it could not download in the chat workspace). A different estimator gives a different prompt and therefore a different cassette key. `eval_estimator()` always uses chars/3, which is conservative, so prompts are identical everywhere and cassettes replay on any machine.
+
+**D-M4-3. Shards are numbered from 1 everywhere, assigned by SHA-256 of the instance id.**
+`--shard 2/6` writes `shard-2.jsonl`, `deferrals-2.json`, `ledger-2.jsonl`. The hash is pinned by a test (`django__django-11099` is in shard 4 of 6, index 3), because changing it mid-run would reshuffle units between shards.
+
+**D-M4-4. What a fresh Actions job needs to resume is on the results branch; locks are not.**
+`config.yaml`, rows, deferral counts, the ledger and quota files are committed with each unit (or each deferral), so a new job on a new runner resumes exactly. Lock files live outside the committed tree (`.git/repro-locks/` or `<results>/.locks/`); a lock whose process is gone is taken over. Across machines the workflow `concurrency` group does the locking (DESIGN 5.9). A run refuses to continue with a config whose hash differs from its frozen `config.yaml`.
+
+**D-M4-5. Units run in a worker thread; only the main thread writes rows.**
+On SIGTERM or SIGINT the main thread stops starting units and waits up to 60 s. If the unit is still running it is dropped: the main thread never writes its row, so a late finish cannot sneak in a partial result. Traces are buffered in memory and written with the row. Ledger entries are still written as calls happen, because they record spend even for dropped units.
+
+**D-M4-6. The token ceiling curve credits only the emitted candidate.**
+At ceiling c, a reproduced instance counts if its emitted candidate existed before cumulative tokens reached c. An earlier candidate that might also have reproduced is not credited, because the oracle only ran on the emitted one. The curve is therefore a lower bound at low ceilings.
+
+**D-M4-7. Plots are hand-written SVG, not matplotlib.**
+matplotlib output embeds version and font details that change across machines, which would break the byte-identical report check (T4.9). The ceiling chart is a small deterministic SVG.
+
+**D-M4-8. B0 has no gate, so its gated mode equals always-emit; B1 needs one oracle run per unit.**
+In B1 the gated candidate is either the always-emit candidate or nothing, so one oracle run covers both modes. The report says B0's gate numbers are not a gate measurement.
+
+**D-M4-9. Fixture cassettes are scripted, not recorded from a model.**
+`scripts/record_fixture_cassettes.py` writes, for each fixture, a fixed list of answers (gold test, a test that passes everywhere, one that fails everywhere, a refusal) under the exact request the baseline makes. One cassette file per instance, so resume order never matters. The logical model is named `fake-recorded` so no one mistakes these numbers for model results. `eval/reports/fixtures.md` is generated from them and the golden test (T4.11) checks it byte for byte.
+
+**D-M4-10. Not in M4: the SWT-bench dataset (M6) and the agent executor (M5).**
+`repro eval` refuses `dataset: swtbench` and `kind: agent` with a clear message. The live model path (router, quota, ledger, `--stop-when-exhausted`) is wired and type-checked but only exercised with fakes until M6. The hermetic suite now takes about 2 min 15 s; the golden end-to-end test is about 28 s of that.

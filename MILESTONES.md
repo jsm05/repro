@@ -230,11 +230,11 @@ If this session runs long, B1 moves to M4. Nothing else moves.
 - Golden end-to-end test: fixtures + cassette in, byte-stable report out.
 
 **Done when**
-- [ ] Metrics match hand-computed answers on the synthetic results file (T4.1 to T4.5)
-- [ ] Kill the run mid-way, restart: no duplicate rows, no unit redone, ledger totals unchanged for finished units (T4.6)
-- [ ] Batch controls, deferral, results-branch writer, and status behave as specified (T4.14 to T4.22)
-- [ ] `repro report` output is byte-identical across two runs on the same input
-- [ ] B0 and B1 numbers on fixtures appear in a generated report
+- [x] Metrics match hand-computed answers on the synthetic results file (T4.1 to T4.5)
+- [x] Kill the run mid-way, restart: no duplicate rows, no unit redone, ledger totals unchanged for finished units (T4.6)
+- [x] Batch controls, deferral, results-branch writer, and status behave as specified (T4.14 to T4.22)
+- [x] `repro report` output is byte-identical across two runs on the same input
+- [x] B0 and B1 numbers on fixtures appear in a generated report
 
 **Explain it:** What is in the denominator of S, and why does a deferred unit not count yet? Why McNemar and not a plain difference of two percentages? How does resume avoid redoing work? What happens to a unit when the Actions job is killed at 6 hours?
 

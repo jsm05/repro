@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-FINISHED: set[str] = {"M1", "M2", "M3"}
+FINISHED: set[str] = {"M1", "M2", "M3", "M4"}
 
 ID = r"(?:T\d+\.[A-Za-z]?\d+|V\d+\.\d+|C\d+|O-\d+)"
 ROW_ID = re.compile(rf"^\|\s*({ID})\s*\|")
