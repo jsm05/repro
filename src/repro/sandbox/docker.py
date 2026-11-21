@@ -13,11 +13,13 @@ hand; the binary can be swapped with REPRO_DOCKER (tests use a fake one).
 from __future__ import annotations
 
 import contextlib
+import io
 import logging
 import os
 import posixpath
 import shutil
 import subprocess
+import tarfile
 import tempfile
 import time
 import uuid
@@ -71,7 +73,7 @@ class DockerSettings:
 def run_argv(image: str, name: str, s: DockerSettings) -> list[str]:
     """The exact `docker run` command. T6.1 snapshots it so no flag can quietly vanish."""
     argv = [
-        "run", "--detach", "--name", name,
+        "run", "--detach", "--init", "--name", name,
         "--label", MANAGED_LABEL, "--label", f"{RUN_LABEL}={s.run_id}",
         "--network", s.network,
         "--memory", s.memory, "--memory-swap", s.memory,
@@ -122,7 +124,10 @@ class DockerSandbox:
         if self._source is not None:
             w = self.settings.workdir
             _docker("exec", self.name, "mkdir", "-p", w, check=True)
-            _docker("cp", f"{self._source}/.", f"{self.name}:{w}", check=True, timeout=600)
+            # Stream a tar owned by root: with all capabilities dropped, root inside the
+            # container could not write files that keep the host user's ownership.
+            _docker("cp", "-", f"{self.name}:{w}", input=_root_tar(self._source), check=True,
+                    timeout=600)
 
     def close(self) -> None:
         if self._closed:
@@ -263,6 +268,20 @@ class DockerSandbox:
         if res.exit_code != 0:
             raise SandboxError(f"tree hash failed: {res.stderr[-300:]}")
         return res.stdout.strip()
+
+
+def _root_tar(src: Path) -> bytes:
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w") as tar:
+
+        def as_root(info: tarfile.TarInfo) -> tarfile.TarInfo:
+            info.uid = info.gid = 0
+            info.uname = info.gname = "root"
+            return info
+
+        for child in sorted(src.iterdir()):
+            tar.add(child, arcname=child.name, filter=as_root)
+    return buf.getvalue()
 
 
 def docker_factory(image: str, settings: DockerSettings, limits: Limits | None = None,

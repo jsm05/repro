@@ -53,7 +53,7 @@ def test_t6_1_run_argv_has_every_hardening_flag() -> None:
     for flag in ("--network none", "--memory 4g", "--memory-swap 4g", "--cpus 2",
                  "--pids-limit 512", "--cap-drop ALL", "--security-opt no-new-privileges",
                  "--label repro.managed=1", "--label repro.run_id=r1", "--workdir /testbed",
-                 "--detach"):
+                 "--detach", "--init"):
         assert flag in joined, flag
     for forbidden in ("--volume", "-v ", "--mount", "docker.sock", "--privileged",
                       "--cap-add", "--network host", "--pid host"):
@@ -61,7 +61,7 @@ def test_t6_1_run_argv_has_every_hardening_flag() -> None:
     assert argv[-4:] == ["tail", "img:1", "-f", "/dev/null"]
     # Snapshot: changing the flags must be a deliberate edit of this test.
     assert argv == [
-        "run", "--detach", "--name", "repro-x", "--label", "repro.managed=1", "--label",
+        "run", "--detach", "--init", "--name", "repro-x", "--label", "repro.managed=1", "--label",
         "repro.run_id=r1", "--network", "none", "--memory", "4g", "--memory-swap", "4g",
         "--cpus", "2", "--pids-limit", "512", "--cap-drop", "ALL", "--security-opt",
         "no-new-privileges", "--workdir", "/testbed", "--env", "PATH=/p", "--entrypoint",

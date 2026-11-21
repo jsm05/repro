@@ -40,11 +40,12 @@ def containers(run_id: str) -> list[str]:
 
 def test_t6_d1_contract_suite_on_docker() -> None:
     """T6.D1: contract tests T1.1 to T1.8 pass against DockerSandbox."""
-    res = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:randomly",
+    res = subprocess.run([sys.executable, "-m", "pytest", "-o", "addopts=", "-p",
+                          "no:randomly", "-p", "no:cacheprovider",
                           str(ROOT / "tests" / "contract"), "-k", "docker"],
                          capture_output=True, text=True, cwd=ROOT, check=False)
     assert res.returncode == 0, res.stdout[-3000:] + res.stderr[-2000:]
-    assert "8 passed" in res.stdout
+    assert "8 passed" in res.stdout, res.stdout[-2000:]
 
 
 def test_t6_d2_no_network(tmp_path: Path) -> None:
