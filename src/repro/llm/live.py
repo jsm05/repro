@@ -106,10 +106,11 @@ def agent_probe(route: Route, base_url: str, key: str, messages: list[dict[str, 
         client = OpenAICompatClient(r, base_url, key, timeout_s=timeout_s)
         try:
             resp = client.complete(messages, max_tokens=min(max_tokens, r.max_output_tokens))
+            where = " (taken from the reasoning field)" if resp.text_source == "reasoning" else ""
             out.append(ProbeResult(name, True, resp.finish_reason, len(resp.text),
                                    resp.completion_tokens, resp.reasoning_tokens, resp.latency_s,
-                                   "has an action block" if "```action" in resp.text
-                                   else "no action block"))
+                                   ("has an action block" if "```action" in resp.text
+                                    else "no action block") + where))
         except LLMError as exc:
             empty = exc.response if isinstance(exc.response, LLMResponse) else None
             out.append(ProbeResult(name, False, empty.finish_reason if empty else "", 0,

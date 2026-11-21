@@ -20,6 +20,16 @@ from repro.llm.secrets import read_key, redact
 from repro.llm.types import LLMResponse, Message
 
 
+def reasoning_text(message: Any) -> str:
+    """The provider's separate reasoning field, under whichever name it uses."""
+    extra = getattr(message, "model_extra", None) or {}
+    for name in ("reasoning_content", "reasoning"):
+        value = getattr(message, name, None) or extra.get(name)
+        if isinstance(value, str) and value:
+            return value
+    return ""
+
+
 class OpenAICompatClient:
     def __init__(
         self,
@@ -111,6 +121,14 @@ class OpenAICompatClient:
         latency = time.monotonic() - start
         choice = resp.choices[0] if resp.choices else None
         text = (choice.message.content or "") if choice is not None else ""
+        source = "content"
+        if choice is not None and not text.strip():
+            # Some providers' reasoning parsers put the whole reply in a separate field and
+            # leave content empty (seen on NVIDIA's Mistral Large 4, D-M5-11). A finished
+            # reply there is still the model's answer.
+            reasoning = reasoning_text(choice.message)
+            if reasoning.strip() and str(choice.finish_reason or "") == "stop":
+                text, source = reasoning, "reasoning"
         usage = resp.usage
         details = getattr(usage, "completion_tokens_details", None) if usage else None
         out = LLMResponse(
@@ -122,6 +140,7 @@ class OpenAICompatClient:
             route_id=self.route.id,
             model=self.route.model,
             latency_s=latency,
+            text_source=source,
         )
         if choice is None or not text.strip():
             raise LLMError(

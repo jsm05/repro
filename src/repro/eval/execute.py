@@ -86,6 +86,7 @@ class MeteredLLM:
             "completion_tokens": resp.completion_tokens,
             "reasoning_tokens": resp.reasoning_tokens, "latency_s": resp.latency_s,
             "retries": resp.retries, "finish_reason": resp.finish_reason,
+            "text_source": resp.text_source,
         }, route=resp.route_id, tokens=resp.total_tokens)
         if self.ledger is not None:
             self.ledger.append(entry_of(resp, self.run_id, self.unit_id, self.clock.now()))

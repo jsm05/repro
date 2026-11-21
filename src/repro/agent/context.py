@@ -125,7 +125,8 @@ class Context:
         msgs = [{"role": "system", "content": self.system},
                 {"role": "user", "content": f"Repository: {self.repo}\n\nIssue:\n{self.issue}"}]
         for t, stubbed in turns:
-            msgs.append({"role": "assistant", "content": t.assistant})
+            # Providers reject empty assistant messages (HTTP 400, D-M5-11).
+            msgs.append({"role": "assistant", "content": t.assistant or "(empty reply)"})
             if t.harness:
                 msgs.append({"role": "user", "content": t.result})
             else:

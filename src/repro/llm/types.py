@@ -22,6 +22,9 @@ class LLMResponse(BaseModel):
     model: str = ""
     latency_s: float = 0.0
     retries: int = 0
+    # "reasoning" when the provider left `content` empty and the reply was taken from its
+    # separate reasoning field (D-M5-11).
+    text_source: str = "content"
 
     @property
     def total_tokens(self) -> int:
