@@ -112,19 +112,26 @@ class OpenAICompatClient:
         choice = resp.choices[0] if resp.choices else None
         text = (choice.message.content or "") if choice is not None else ""
         usage = resp.usage
-        if choice is None or not text.strip():
-            raise LLMError(ErrorClass.EMPTY_OUTPUT, "response had no content", provider=provider)
         details = getattr(usage, "completion_tokens_details", None) if usage else None
-        return LLMResponse(
+        out = LLMResponse(
             text=text,
             prompt_tokens=int(usage.prompt_tokens) if usage else 0,
             completion_tokens=int(usage.completion_tokens) if usage else 0,
             reasoning_tokens=int(getattr(details, "reasoning_tokens", 0) or 0),
-            finish_reason=str(choice.finish_reason or ""),
+            finish_reason=str(choice.finish_reason or "") if choice is not None else "",
             route_id=self.route.id,
             model=self.route.model,
             latency_s=latency,
         )
+        if choice is None or not text.strip():
+            raise LLMError(
+                ErrorClass.EMPTY_OUTPUT,
+                f"response had no content (finish_reason={out.finish_reason or 'none'}, "
+                f"completion_tokens={out.completion_tokens}, "
+                f"reasoning_tokens={out.reasoning_tokens})",
+                provider=provider, response=out,
+            )
+        return out
 
 
 def make_client_factory(

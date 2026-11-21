@@ -11,6 +11,7 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping
 from enum import StrEnum
+from typing import Any
 
 
 class ErrorClass(StrEnum):
@@ -33,8 +34,11 @@ class LLMError(Exception):
         provider: str = "",
         retry_after: float | None = None,
         headers: Mapping[str, str] | None = None,
+        response: Any = None,
     ):
         super().__init__(f"{cls.value} (HTTP {status}): {message[:300]}")
+        # For EMPTY_OUTPUT: the (empty) LLMResponse, so its token usage is still counted.
+        self.response = response
         self.cls = cls
         self.status = status
         self.provider = provider

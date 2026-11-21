@@ -313,6 +313,13 @@ class Router:
                     log.error("route %s disabled for this run: authentication failed", route.id)
                     self.disabled.add(route.id)
                     return _Outcome(error=cls)
+                if cls is ErrorClass.EMPTY_OUTPUT and isinstance(exc.response, LLMResponse):
+                    # A model problem, not a provider one (DESIGN 5.5): hand the empty reply
+                    # back so its tokens are counted and the caller can send a repair message.
+                    log.warning("%s: %s", route.id, exc)
+                    self.model_wait_s += exc.response.latency_s
+                    return _Outcome(response=exc.response.model_copy(
+                        update={"route_id": route.id, "retries": retries}))
                 raise RouterError(cls, f"{route.id}: {exc}") from None
             self.model_wait_s += resp.latency_s
             self._breaker_ok(route)

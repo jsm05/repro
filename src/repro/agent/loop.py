@@ -232,13 +232,18 @@ class AgentLoop:
             self.requests += 1
             self.tokens += resp.total_tokens
             self.model_s += resp.latency_s
-            done = self._step(resp.text)
+            done = self._step(resp.text, resp.finish_reason)
             if done is not None:
                 return done
 
-    def _step(self, text: str) -> AgentResult | None:
+    def _step(self, text: str, finish_reason: str = "") -> AgentResult | None:
         lim = self.limits
         try:
+            if not text.strip():
+                raise ParseError(
+                    "your reply was empty"
+                    + (" because it hit the output limit, probably while reasoning; think "
+                       "briefly and answer with one action" if finish_reason == "length" else ""))
             action = parse_action(text)
         except ParseError as exc:
             self.parse_failures += 1

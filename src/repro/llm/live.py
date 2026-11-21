@@ -65,10 +65,67 @@ class RouteCheck:
 
 
 @dataclass
+class ProbeResult:
+    variant: str
+    ok: bool
+    finish_reason: str = ""
+    content_chars: int = 0
+    completion_tokens: int = 0
+    reasoning_tokens: int = 0
+    latency_s: float = 0.0
+    detail: str = ""
+
+
+def first_agent_prompt(fixtures_root: str | Path = "tests/fixtures/mini_repos",
+                       fixture: str = "f01_off_by_one") -> list[dict[str, str]]:
+    """The exact first prompt the agent sends on a fixture (system prompt, issue, state card)."""
+    from repro.agent.context import Card, Context
+    from repro.agent.prompts import SYSTEM_V1
+    from repro.datasets.fixtures import FixtureSource
+    from repro.llm.tokens import TokenEstimator, chars_counter
+
+    view = FixtureSource(fixtures_root).load(fixture).instance.public
+    est = TokenEstimator(counter=chars_counter)
+    card = Card(budget="30 steps, 600,000 tokens, 40 requests, 8 checks")
+    return Context(SYSTEM_V1, view.issue_text, view.repo, est, 32_000).build(
+        card.render(est), "", "").messages
+
+
+def agent_probe(route: Route, base_url: str, key: str, messages: list[dict[str, str]],
+                max_tokens: int = 8000, timeout_s: float = 300) -> list[ProbeResult]:
+    """Send the agent's first prompt three ways and record what comes back (M5 diagnosis
+    of empty replies): as is, with the system prompt merged into the user turn, and with
+    reasoning_effort=low."""
+    variants = [
+        ("system role", route),
+        ("system merged into user", route.model_copy(update={"system_role": False})),
+        ("reasoning_effort=low", route.model_copy(update={"reasoning_effort": "low"})),
+    ]
+    out = []
+    for name, r in variants:
+        client = OpenAICompatClient(r, base_url, key, timeout_s=timeout_s)
+        try:
+            resp = client.complete(messages, max_tokens=min(max_tokens, r.max_output_tokens))
+            out.append(ProbeResult(name, True, resp.finish_reason, len(resp.text),
+                                   resp.completion_tokens, resp.reasoning_tokens, resp.latency_s,
+                                   "has an action block" if "```action" in resp.text
+                                   else "no action block"))
+        except LLMError as exc:
+            empty = exc.response if isinstance(exc.response, LLMResponse) else None
+            out.append(ProbeResult(name, False, empty.finish_reason if empty else "", 0,
+                                   empty.completion_tokens if empty else 0,
+                                   empty.reasoning_tokens if empty else 0,
+                                   empty.latency_s if empty else 0.0, str(exc)[:200]))
+    return out
+
+
+@dataclass
 class SmokeReport:
     models: dict[str, list[str]] = field(default_factory=dict)
     model_errors: dict[str, str] = field(default_factory=dict)
     checks: list[RouteCheck] = field(default_factory=list)
+    probe_route: str = ""
+    probes: list[ProbeResult] = field(default_factory=list)
 
     @property
     def all_ok(self) -> bool:
@@ -130,6 +187,22 @@ def smoke(
             except LLMError as exc:
                 check.detail += "; reasoning_effort=low refused: " + redact(str(exc)[:120], secrets)
         report.checks.append(check)
+    primary = registry.enabled_routes("primary") if "primary" in registry.data.logical_models \
+        else []
+    if primary:
+        route = primary[0]
+        prov = registry.provider(route)
+        key = read_key(env, prov.api_key_env)
+        if key:
+            report.probe_route = route.id
+            try:
+                report.probes = agent_probe(route, prov.base_url, key, first_agent_prompt())
+            except Exception as exc:  # report, don't crash the smoke run
+                report.probes = [ProbeResult("all", False,
+                                             detail=redact(f"{type(exc).__name__}: {exc}"[:200],
+                                                           secrets))]
+            for pr in report.probes:
+                pr.detail = redact(pr.detail, secrets)
     return report
 
 
@@ -145,6 +218,15 @@ def smoke_markdown(report: SmokeReport, when: str) -> str:
             f"{c.prompt_tokens} | {c.completion_tokens} | {c.reasoning_tokens} | {low} | "
             f"{'yes' if c.ledger_matches else 'no'} | {c.detail.replace('|', '/')} |"
         )
+    if report.probes:
+        lines += ["", f"## Agent-prompt probe ({report.probe_route}, max_tokens 8000)", "",
+                  "The agent's first prompt on fixture f01, sent three ways.", "",
+                  "| Variant | Content | finish_reason | Chars | Completion | Reasoning | "
+                  "Latency s | Detail |", "|---|---|---|---|---|---|---|---|"]
+        for pr in report.probes:
+            lines.append(f"| {pr.variant} | {'yes' if pr.ok else 'EMPTY'} | {pr.finish_reason} | "
+                         f"{pr.content_chars} | {pr.completion_tokens} | {pr.reasoning_tokens} | "
+                         f"{pr.latency_s:.1f} | {pr.detail.replace('|', '/')} |")
     lines += ["", "## Models visible to each key", ""]
     for name, ids in report.models.items():
         lines.append(f"- **{name}** ({len(ids)}): " + ", ".join(f"`{i}`" for i in ids))
