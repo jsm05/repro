@@ -185,3 +185,23 @@ def test_context_length_and_auth(tmp_path: Path) -> None:
         r.complete("primary", MSGS, max_tokens=10)
         assert len(a.requests) == 1, "route disabled for the rest of the run"
         assert "a/m" in r.disabled
+
+
+def empty_reply(finish: str = "length", completion: int = 8000) -> Reply:
+    r = ok(text="", prompt_tokens=900, completion_tokens=completion, reasoning_tokens=completion)
+    r.body["choices"][0]["finish_reason"] = finish
+    return r
+
+
+def test_empty_output_is_returned_and_counted(tmp_path: Path) -> None:
+    """T3.15: a 200 with no content is a model problem: returned empty, tokens counted."""
+    with FakeProvider() as fp:
+        fp.push(empty_reply())
+        reg = registry({"p": fp.base_url}, [route("p/m", "p", "m")], {"primary": ["p/m"]})
+        r = router(reg, tmp_path)
+        budget = TokenBudget()
+        resp = r.complete("primary", MSGS, max_tokens=8000, budget=budget)
+    assert resp.text == "" and resp.finish_reason == "length" and resp.route_id == "p/m"
+    entries, _ = Ledger(tmp_path / "ledger.jsonl").read()
+    assert len(entries) == 1 and entries[0].total_tokens == 8900
+    assert budget.used_tokens == 8900

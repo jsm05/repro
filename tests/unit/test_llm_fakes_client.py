@@ -111,4 +111,6 @@ def test_empty_output_and_retry_after_header() -> None:
         with pytest.raises(LLMError) as exc:
             OpenAICompatClient(_route(), fp.base_url, TEST_KEY).complete(MSGS, max_tokens=5)
         assert exc.value.cls is ErrorClass.EMPTY_OUTPUT
+        assert exc.value.response is not None and exc.value.response.text == ""
+        assert exc.value.response.prompt_tokens == 10  # usage kept for accounting
     assert retry_after_seconds({"Retry-After": "7"}, "") == 7.0

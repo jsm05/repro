@@ -492,3 +492,15 @@ def test_t5_23_quota_runs_out_mid_run(tmp_path: Path) -> None:
     with harness(tmp_path, script, gate=FakeGate([True])) as h:
         res = h.run()
     assert res.state == "DEFERRED" and res.best is None and res.gated is None
+
+
+def test_empty_reply_gets_a_repair_message(tmp_path: Path) -> None:
+    """T5.22: an empty reply cut off at the output limit is a parse failure with a hint."""
+    empty = LLMResponse(text="", prompt_tokens=900, completion_tokens=8000, reasoning_tokens=8000,
+                        finish_reason="length")
+    script: list[Any] = [empty, act("abstain", reason="x")]
+    with harness(tmp_path, script) as h:
+        res = h.run()
+        prompts = h.prompts()
+    assert res.state == "ABSTAINED" and res.tokens >= 8900
+    assert "hit the output limit" in prompts[1]
