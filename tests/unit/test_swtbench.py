@@ -299,3 +299,33 @@ def test_harness_runner_end_to_end_through_the_gate(tmp_path: Path) -> None:
     v = OnlineGate(factory, GateConfig(timeout_s=60)).verify(cand)
     assert v.passed, v.reason
     assert "AssertionError" in v.signatures["tests/test_bug.py::BugTests::test_double_two"]
+
+
+def test_repair_patch_and_form_feeds() -> None:
+    """D-M6-12: trimmed trailing blank context is restored; form feeds do not split lines."""
+    from repro.gate.candidate import file_diff
+    from repro.gate.scope import DiffParseError, parse_diff, repair_patch
+
+    full = ("diff --git a/t.py b/t.py\n--- a/t.py\n+++ b/t.py\n@@ -1,3 +1,4 @@\n"
+            " def f():\n+    x = 1\n     pass\n \n")
+    with pytest.raises(DiffParseError, match="middle of a hunk"):
+        parse_diff(full.strip())
+    assert repair_patch(full.strip()) == full
+    assert repair_patch(full) == full  # an intact patch is unchanged
+    ff = ("diff --git a/t.py b/t.py\n--- a/t.py\n+++ b/t.py\n@@ -1,2 +1,2 @@\n"
+          "-a\x0cb\n+a\x0cc\n x\n")
+    assert parse_diff(ff)[0].hunks[0].lines == ["-a\x0cb", "+a\x0cc", " x"]
+    d = file_diff("t.py", "a\x0cb\nx\n", "a\x0cc\nx\n")
+    assert parse_diff(d)[0].hunks[0].lines[:2] == ["-a\x0cb", "+a\x0cc"]
+
+
+@needs_swt
+def test_loader_repairs_trimmed_patches() -> None:
+    """D-M6-12: a record whose patches were stripped still loads with parseable patches."""
+    from repro.datasets.swtbench import record_to_instance
+    from repro.gate.scope import parse_diff
+
+    rec = dict(DJANGO_REC, test_patch=TEST_PATCH.strip(), patch=FIX.strip())
+    inst, _, unmapped = record_to_instance(rec)
+    assert parse_diff(inst.sealed.gold_test_patch) and parse_diff(inst.sealed.gold_fix_patch)
+    assert inst.sealed.fail_to_pass == [F2P_ID] and unmapped == []
