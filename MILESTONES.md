@@ -291,7 +291,7 @@ gh run watch --repo jsm05/repro
 - [ ] For 10 pilot instances the gold tests are F→P in my oracle, and the official harness agrees on all 10 (or the ones it could build, with the rest listed)
 - [ ] `.git` inside the sandbox has exactly one commit; a network call from inside fails
 - [ ] No containers left after a killed run; disk is reclaimed between instances
-- [ ] A static check confirms no workflow uses `pull_request_target` and secrets appear only in steps that need them (T6.10)
+- [x] A static check confirms no workflow uses `pull_request_target` and secrets appear only in steps that need them (T6.10)
 
 **Explain it:** What does each Docker flag defend against? What is the threat model and where does it stop? How could the fix leak into the agent's view, and what blocks each path? Why can't a fork's pull request read the API keys?
 

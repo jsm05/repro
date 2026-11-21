@@ -189,3 +189,35 @@ Run 44891484001. With the raw messages now in the trace the pattern is plain. Mi
 **D-M5-14. Fifth live fixture run works: 7 of 8 fixtures reproduced; M5 closed (2026-11-21).**
 Run 44893477875 (23 min). With native tool schemas, Mistral Large 4 answered with tool calls (61 of 80 replies) and the agent reproduced 7 of 8 fixtures, all `SUBMITTED` after one gate check (f08 took 3 checks and 20 steps, 67K tokens; the others 7 to 10 steps, 11K to 18K tokens). f05 is an honest WRONG_TEST: the agent wrote two tests, both failed for the right reason on the buggy code, but one expected the wrong behaviour and still fails after the fix (F→F). The gate cannot catch that without the fix, which is exactly the gap H3 measures. No failover happened (every call served by Mistral). The probe also showed Nemotron Ultra and Gemini Flash-Lite answering the agent prompt with a proper text action, so they are working fallbacks; Laguna XS answered without one. The hermetic suite now replays the committed cassettes to the same outcomes. Smaller issues seen, left for M7 prompt work: 13 replies were prose with no action, two bash calls used `command` instead of `cmd`, and three calls nested our `{"args": ...}` format inside the native call (now unwrapped by the client; the recorded run is unaffected because cassettes store the converted text).
 
+## 2026-11-21, M6 (chat part; the Docker run is E1)
+
+**D-M6-1. Test commands, log parsers and image builds come from the pinned SWT-bench harness, not the `swebench` package.**
+SWT-bench vendors its own copy of the SWE-bench specs (`constants.py`, `log_parsers.py`) and builds its own images, and it is the harness that scores our predictions, so using it keeps both sides identical. Its top-level package is called `src`, which clashes with this repo's layout, so Repro loads `constants.py` and `log_parsers.py` by file path (both are stdlib-only, so CI only needs a checkout, no install), and runs image builds in a subprocess with the checkout as working directory (`repro/datasets/_swt_driver.py`). The commit is pinned in one constant (`SWT_BENCH_REF`), and a test checks every workflow uses the same one.
+
+**D-M6-2. One hardened image per instance instead of hardening every container.**
+DESIGN 5.2 says to replace `.git` at container start. The agent's workspace and every gate and oracle run start a container, and `git add -A` on Django takes a while, so Repro does it once: start the SWT-bench instance image with the network off, replace `.git` with one fresh commit, garbage-collect, apply nothing else, and `docker commit` it as `repro-hardened:<instance>`. All sandboxes start from that image. Same guarantee (no later commit, remote or reflog reachable), paid once.
+
+**D-M6-3. Django and sympy run through the harness's own command and parser; pytest repos keep the Repro plugin.**
+Statuses for `runtests.py` and `bin/test` come from SWT-bench's parsers, as DESIGN 5.3 asks. The gate also needs failure details and repo calls, so: exception type, message and repo frames are read from the tracebacks those runners print, and a `sitecustomize.py` tracer (Python 3.5 compatible) records which repo functions run. Unittest reports an exception raised inside a test as ERROR; that is the same event as a pytest call-phase failure, so it counts as FAILED. A requested test missing from the log counts as ERROR (did not run). An end-to-end test drives a unittest repo through the whole gate this way.
+
+**D-M6-4. G5 is weaker on sympy.**
+Django's tests run through `unittest.TestCase.run`, so the tracer attributes calls to each test. sympy's `bin/test` has no such hook, so every repo function called during the run counts for each test in it. A test that touches no repo code could pass G5 if another test in the same file does. Accepted for now and flagged for the M7 pilot.
+
+**D-M6-5. sphinx is not supported yet.**
+The harness runs sphinx's tests through `tox`, which this runner does not drive. sphinx is 28 of the 433 Verified instances (6.5%). It is left out of the pilot; M7 decides between running pytest in the image's environment or driving tox, before the Test sample is drawn.
+
+**D-M6-6. Disk policy per instance.**
+After every unit the instance's SWT-bench image and its hardened image are removed and `docker system prune` runs; if free disk is then under 12 GB, the shared environment image goes too. Free disk is written to the trace as a `disk` event. The executor releases even when a unit crashes.
+
+**D-M6-7. Workflow hardening landed with M6.**
+`live-smoke.yml` and `soak.yml` had the API keys in job-level `env`; they are now only in the steps that call models. `ci.yml` no longer runs on `pull_request` (only `push` and manual), and every workflow has a `concurrency` group. `scripts/check_workflows.py` enforces this in CI (T6.10). The nightly `eval.yml` schedule does nothing unless `eval/active_run.yaml` exists on `main`.
+
+**D-M6-8. Instance records are exported on the runner and never committed.**
+They hold the real fix and tests. `scripts/export_instances.py` writes them to `eval/data/` (git-ignored) in each workflow. Configs can name their instances with `instances_file` (new field, part of the hash, which is why the fixture report's hashes changed).
+
+**D-M6-9. The leak canary scans traces and recorded prompts after the fact.**
+Markers: lines the real fix adds (20+ characters, not already in the repo), the real tests' function names, the fail-to-pass names, and a slice of the hints. It scans traces and, where a run recorded them, cassettes (which hold the prompts). A live guard that refuses to send a prompt with a marker was considered and left out for now: an agent can legitimately invent the same test name as the real one.
+
+**D-M6-10. Docker details.**
+The reaper runs at the start and end of every SWT-bench batch (new `on_stop` hook on the runner, called on SIGTERM too). The host watchdog gives the in-container `timeout` 15 s of grace before killing the container. A process killed with exit 137 that did not time out is reported as a memory failure. In-container timeouts are whole seconds, at least 1.
+
