@@ -23,7 +23,7 @@ class EvalConfig(BaseModel):
     dataset: Literal["fixtures", "swtbench"] = "fixtures"
     # Instance ids to run, in order. None means every instance the dataset has.
     instances: list[str] | None = None
-    logical_model: str = "mistral-large-4"
+    logical_model: str = "primary"
     policy: Literal["pinned", "chain"] = "pinned"
     # live: real routes through the router. cassette: replay recorded responses only.
     llm: Literal["live", "cassette"] = "live"
