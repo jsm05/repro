@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+"""A fake `docker` CLI for unit tests. Logs every call and keeps a tiny state file.
+
+FAKE_DOCKER_LOG   jsonl file: one argv list per call
+FAKE_DOCKER_STATE json file: {"containers": {name: {"labels": {...}}}, "images": [...]}
+FAKE_DOCKER_HANG  if set, `docker exec` sleeps (to test the host watchdog)
+"""
+import json
+import os
+import sys
+import time
+
+args = sys.argv[1:]
+log = os.environ.get("FAKE_DOCKER_LOG")
+state_path = os.environ.get("FAKE_DOCKER_STATE")
+if log:
+    with open(log, "a") as f:
+        f.write(json.dumps(args) + "\n")
+state = {"containers": {}, "images": []}
+if state_path and os.path.exists(state_path):
+    with open(state_path) as f:
+        state = json.load(f)
+
+
+def save():
+    if state_path:
+        with open(state_path, "w") as f:
+            json.dump(state, f)
+
+
+def opt_values(argv, flag):
+    return [argv[i + 1] for i, a in enumerate(argv[:-1]) if a == flag]
+
+
+cmd = args[0] if args else ""
+if cmd == "run":
+    name = opt_values(args, "--name")[0]
+    labels = dict(lbl.split("=", 1) for lbl in opt_values(args, "--label"))
+    state["containers"][name] = {"labels": labels}
+    save()
+    print(name)
+elif cmd == "ps":
+    wanted = [f.split("=", 1)[1] for f in opt_values(args, "--filter")]
+    for name, c in sorted(state["containers"].items()):
+        have = ["%s=%s" % kv for kv in c["labels"].items()]
+        if all(w in have for w in wanted):
+            print(name)
+elif cmd == "rm":
+    for name in [a for a in args[1:] if not a.startswith("-")]:
+        state["containers"].pop(name, None)
+    save()
+elif cmd == "kill":
+    state["containers"].pop(args[1], None)
+    save()
+elif cmd == "exec":
+    if os.environ.get("FAKE_DOCKER_HANG"):
+        time.sleep(1000)
+elif cmd == "image" and args[1:2] == ["inspect"]:
+    sys.exit(0 if args[2] in state["images"] else 1)
+elif cmd == "rmi":
+    for img in [a for a in args[1:] if not a.startswith("-")]:
+        if img in state["images"]:
+            state["images"].remove(img)
+    save()
+elif cmd == "commit":
+    state["images"].append(args[-1])
+    save()
+sys.exit(0)

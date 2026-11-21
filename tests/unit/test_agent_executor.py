@@ -87,7 +87,7 @@ def test_agent_config_fields_are_in_the_hash() -> None:
 
 @pytest.mark.parametrize("bad", ["swtbench"])
 def test_cli_refuses_unbuilt_dataset(bad: str, tmp_path: Path) -> None:
-    """The CLI says clearly which datasets arrive later."""
+    """The CLI says clearly when the SWT-bench records are missing."""
     from click.testing import CliRunner
 
     from repro.cli import main
@@ -97,7 +97,7 @@ def test_cli_refuses_unbuilt_dataset(bad: str, tmp_path: Path) -> None:
                    "cassette_dir: nowhere\n")
     res = CliRunner().invoke(main, ["eval", "--config", str(cfg), "--run-id", "x",
                                     "--results-dir", str(tmp_path)])
-    assert res.exit_code != 0 and "arrives in M6" in res.output
+    assert res.exit_code != 0 and "records not found" in res.output
 
 
 def test_record_then_replay_in_order(tmp_path: Path) -> None:

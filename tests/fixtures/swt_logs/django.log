@@ -1,0 +1,31 @@
++ ./tests/runtests.py --verbosity 2 --settings=test_sqlite --parallel 1 auth_tests.test_validators.UsernameValidatorsTests.test_ascii_validator auth_tests.test_validators.UsernameValidatorsTests.test_unicode_validator auth_tests.test_validators.UsernameValidatorsTests.test_raises
+Testing against Django installed in '/testbed/django'
+Importing application auth_tests
+Skipping setup of unused database(s): default, other.
+System check identified no issues (0 silenced).
+test_ascii_validator (auth_tests.test_validators.UsernameValidatorsTests) ... FAIL
+test_raises (auth_tests.test_validators.UsernameValidatorsTests) ... ERROR
+test_unicode_validator (auth_tests.test_validators.UsernameValidatorsTests) ... ok
+
+======================================================================
+ERROR: test_raises (auth_tests.test_validators.UsernameValidatorsTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/testbed/tests/auth_tests/test_validators.py", line 20, in test_raises
+    v("x")
+  File "/testbed/django/contrib/auth/validators.py", line 9, in __call__
+    raise TypeError("bad input")
+TypeError: bad input
+
+======================================================================
+FAIL: test_ascii_validator (auth_tests.test_validators.UsernameValidatorsTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/testbed/tests/auth_tests/test_validators.py", line 12, in test_ascii_validator
+    self.assertEqual(v.regex.pattern, r'^[\w.@+-]+\Z')
+AssertionError: '^[\\w.@+-]+$' != '^[\\w.@+-]+\\Z'
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.004s
+
+FAILED (failures=1, errors=1)

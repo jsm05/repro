@@ -1,4 +1,5 @@
-"""Sandbox contract tests (TEST_SPEC M1). Every Sandbox backend must pass these."""
+"""Sandbox contract tests (TEST_SPEC M1, and T6.D1 for Docker). Every Sandbox backend must
+pass these."""
 
 from __future__ import annotations
 
@@ -9,7 +10,7 @@ import pytest
 
 from repro.sandbox.base import SandboxError, SandboxPathError
 from tests.contract.conftest import LocalBackend
-from tests.helpers import SANDBOX_DIGEST, dir_digest, tiny_repo, wait_dead
+from tests.helpers import SANDBOX_DIGEST, dir_digest, tiny_repo
 
 
 def digest(sb) -> str:  # type: ignore[no-untyped-def]
@@ -39,7 +40,7 @@ def test_timeout_kills_process_tree(backend: LocalBackend, tmp_path: Path) -> No
     assert r.timed_out
     assert elapsed < 1 + 2
     pid = int(sb.get_file("grandchild.pid").decode().strip())
-    assert wait_dead(pid), "grandchild survived the timeout"
+    assert backend.process_dead(sb, pid), "grandchild survived the timeout"
 
 
 def test_output_is_capped_head_and_tail(backend: LocalBackend, tmp_path: Path) -> None:
@@ -158,7 +159,7 @@ def test_close_removes_everything(backend: LocalBackend, tmp_path: Path) -> None
     pid = int(bg.stdout.strip())
     sb.close()
     assert backend.is_gone(sb)
-    assert wait_dead(pid), "background process outlived close()"
+    assert backend.process_dead(sb, pid), "background process outlived close()"
     sb.close()  # idempotent
     with pytest.raises(SandboxError):
         sb.exec("true", timeout_s=5)
