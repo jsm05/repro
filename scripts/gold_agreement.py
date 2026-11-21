@@ -63,6 +63,26 @@ def official(instance_id: str, run_id: str) -> str:
     return f"no result (exit {proc.returncode}): {proc.stdout[-300:]} {proc.stderr[-300:]}"
 
 
+def write_report(rows: list[dict[str, Any]], out: Path, total: int) -> int:
+    agree = sum(1 for r in rows if r["agree"])
+    lines = ["# Gold agreement on the pilot (T6.D8)", "",
+             f"Our oracle vs the official SWT-bench harness on the gold test patches: "
+             f"{agree} of {len(rows)} agree ({len(rows)} of {total} instances done).", "",
+             "| Instance | Ours | Official | Agree | F→P per fail-to-pass test | Seconds | Note |",
+             "|---|---|---|---|---|---|---|"]
+    for r in rows:
+        trans = ", ".join(f"{t.split('::')[-1]} {lbl}" for t, lbl in
+                          sorted(r.get("transitions", {}).items()))
+        note = (r.get("error") or ("" if r["ours"] == "REPRODUCED" else r.get("ours_reason", "")))
+        lines.append(f"| `{r['instance_id']}` | {r['ours']} | {r['official'][:40]} | "
+                     f"{'yes' if r['agree'] else 'NO'} | {trans} | {r['seconds']} | "
+                     f"{str(note).replace('|', '/')[:160]} |")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines) + "\n")
+    out.with_suffix(".json").write_text(json.dumps(rows, indent=1, sort_keys=True) + "\n")
+    return agree
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("ids_file")
@@ -73,8 +93,17 @@ def main() -> int:
     ids = Path(args.ids_file).read_text().split()
     ds = SWTBenchDataset(args.records, run_id="gold-agreement")
     reap("gold-agreement")
-    rows = []
+    out = Path(args.out)
+    # Resume: instances already in the JSON report (from an earlier, cut-off run) are kept.
+    rows: list[dict[str, Any]] = []
+    if out.with_suffix(".json").exists():
+        rows = [r for r in json.loads(out.with_suffix(".json").read_text())
+                if r["instance_id"] in ids and "error" not in r]
+    done = {r["instance_id"] for r in rows}
     for iid in ids:
+        if iid in done:
+            print(f"{iid}: already in the report, skipped", flush=True)
+            continue
         t0 = time.monotonic()
         row: dict[str, Any] = {"instance_id": iid}
         try:
@@ -104,24 +133,9 @@ def main() -> int:
         row["seconds"] = round(time.monotonic() - t0)
         rows.append(row)
         print(json.dumps(row), flush=True)
+        write_report(rows, out, len(ids))  # after every instance, so a cut-off run keeps it
 
-    agree = sum(1 for r in rows if r["agree"])
-    lines = ["# Gold agreement on the pilot (T6.D8)", "",
-             f"Our oracle vs the official SWT-bench harness on the gold test patches: "
-             f"{agree} of {len(rows)} agree.", "",
-             "| Instance | Ours | Official | Agree | F→P per fail-to-pass test | Seconds | Note |",
-             "|---|---|---|---|---|---|---|"]
-    for r in rows:
-        trans = ", ".join(f"{t.split('::')[-1]} {lbl}" for t, lbl in
-                          sorted(r.get("transitions", {}).items()))
-        note = (r.get("error") or ("" if r["ours"] == "REPRODUCED" else r.get("ours_reason", "")))
-        lines.append(f"| `{r['instance_id']}` | {r['ours']} | {r['official'][:40]} | "
-                     f"{'yes' if r['agree'] else 'NO'} | {trans} | {r['seconds']} | "
-                     f"{str(note).replace('|', '/')[:160]} |")
-    out = Path(args.out)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text("\n".join(lines) + "\n")
-    out.with_suffix(".json").write_text(json.dumps(rows, indent=1, sort_keys=True) + "\n")
+    agree = write_report(rows, Path(args.out), len(ids))
     print(f"agreement: {agree}/{len(rows)}")
     return 0 if agree == len(rows) else 1
 
