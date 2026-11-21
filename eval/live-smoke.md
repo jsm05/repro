@@ -1,12 +1,12 @@
-# Live smoke (2026-11-21T08:41+00:00)
+# Live smoke (2026-11-21T08:59+00:00)
 
 ## Route calls
 
 | Route | Model | OK | Latency s | Prompt | Completion | Reasoning | Reasoning at effort=low | Ledger matches | Detail |
 |---|---|---|---|---|---|---|---|---|---|
-| nvidia/mistral-large-4 | `mistralai/mistral-large-4-1t-a52b` | yes | 18.1 | 22 | 18 | 16 | 38 | yes | stop |
-| nvidia/nemotron-3-ultra | `nvidia/nemotron-3-ultra-550b-a55b` | yes | 0.5 | 23 | 14 | 11 | 13 | yes | stop |
-| nvidia/laguna-xs-2.1 | `poolside/laguna-xs-2.1` | yes | 0.1 | 49 | 2 | 0 |  | yes | stop |
+| nvidia/mistral-large-4 | `mistralai/mistral-large-4-1t-a52b` | yes | 1.8 | 22 | 18 | 16 | 38 | yes | stop |
+| nvidia/nemotron-3-ultra | `nvidia/nemotron-3-ultra-550b-a55b` | yes | 0.6 | 23 | 14 | 11 | 13 | yes | stop |
+| nvidia/laguna-xs-2.1 | `poolside/laguna-xs-2.1` | yes | 0.2 | 49 | 2 | 0 |  | yes | stop |
 | gemini/flash-lite | `gemini-3.5-flash-lite` | yes | 0.6 | 8 | 1 | 0 |  | yes | stop |
 
 ## Agent-prompt probe (nvidia/mistral-large-4, max_tokens 8000)
@@ -15,9 +15,9 @@ The agent's first prompt on fixture f01, sent three ways.
 
 | Variant | Content | finish_reason | Chars | Completion | Reasoning | Latency s | Detail |
 |---|---|---|---|---|---|---|---|
-| system role | EMPTY | stop | 0 | 54 | 53 | 15.1 | empty_output (HTTP None): response had no content (finish_reason=stop, completion_tokens=54, reasoning_tokens=53) |
-| system merged into user | EMPTY | stop | 0 | 47 | 46 | 1.9 | empty_output (HTTP None): response had no content (finish_reason=stop, completion_tokens=47, reasoning_tokens=46) |
-| reasoning_effort=low | EMPTY | stop | 0 | 51 | 50 | 18.8 | empty_output (HTTP None): response had no content (finish_reason=stop, completion_tokens=51, reasoning_tokens=50) |
+| system role | yes | stop | 24 | 53 | 52 | 1.8 | no action block (taken from the reasoning field) |
+| system merged into user | yes | stop | 24 | 53 | 52 | 1.6 | no action block (taken from the reasoning field) |
+| reasoning_effort=low | yes | stop | 24 | 54 | 53 | 18.2 | no action block (taken from the reasoning field) |
 
 ## Models visible to each key
 
