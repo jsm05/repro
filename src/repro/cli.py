@@ -216,6 +216,29 @@ def llm_smoke(config_path: Path, out: Path, ledger_path: Path) -> None:
         raise SystemExit(1)
 
 
+@llm.command("redact")
+@ROUTES_OPT
+@click.argument("paths", nargs=-1, type=click.Path(exists=True, path_type=Path))
+def llm_redact(config_path: Path, paths: tuple[Path, ...]) -> None:
+    """Remove every configured API key from files before a workflow commits them."""
+    import os
+
+    from repro.llm.registry import Registry
+    from repro.llm.secrets import known_secrets, redact
+
+    secrets = known_secrets(Registry.from_yaml(config_path), os.environ)
+    files = [f for p in paths for f in ([p] if p.is_file() else sorted(p.rglob("*")))
+             if f.is_file()]
+    changed = 0
+    for f in files:
+        text = f.read_text(errors="replace")
+        clean = redact(text, secrets)
+        if clean != text:
+            f.write_text(clean)
+            changed += 1
+    click.echo(f"checked {len(files)} files, redacted {changed}")
+
+
 @llm.command("soak")
 @ROUTES_OPT
 @click.option("--route", "route_id", default="nvidia/mistral-large-4", show_default=True)

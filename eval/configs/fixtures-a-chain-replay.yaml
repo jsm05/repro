@@ -1,0 +1,12 @@
+# Replays the live A-chain fixture run with no network (the hermetic suite runs this).
+config_id: fixtures-a-chain-replay
+kind: agent
+dataset: fixtures
+logical_model: dev
+policy: chain
+llm: cassette
+cassette_dir: eval/cassettes/fixtures-a-chain
+cassette_match: order
+max_steps: 20
+max_output_tokens: 8000
+gate_timeout_s: 30.0

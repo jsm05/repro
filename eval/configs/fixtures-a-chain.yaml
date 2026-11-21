@@ -1,0 +1,14 @@
+# A-chain on all 8 fixtures with live free-tier models, recording every reply to
+# eval/cassettes/fixtures-a-chain. Run by live-smoke.yml (mode: fixtures). Dev and demo
+# only: chain policy may mix models, so this is never a headline number.
+config_id: fixtures-a-chain
+kind: agent
+dataset: fixtures
+logical_model: dev
+policy: chain
+llm: record
+cassette_dir: eval/cassettes/fixtures-a-chain
+cassette_match: order
+max_steps: 20
+max_output_tokens: 8000
+gate_timeout_s: 30.0
