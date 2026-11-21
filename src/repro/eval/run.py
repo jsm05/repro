@@ -38,7 +38,10 @@ def shard_of(instance_id: str, shards: int) -> int:
 
 
 def shard_units(ids: Sequence[str], shard: int, shards: int) -> list[str]:
-    return [i for i in ids if shard_of(i, shards) == shard]
+    """Units of shard k of N, numbered from 1 like `--shard k/N`."""
+    if not 1 <= shard <= shards:
+        raise ValueError(f"bad shard {shard}/{shards}")
+    return [i for i in ids if shard_of(i, shards) == shard - 1]
 
 
 @dataclass(frozen=True)
@@ -102,7 +105,7 @@ class ShardLock:
 
 @dataclass(frozen=True)
 class BatchOptions:
-    shard: int = 0
+    shard: int = 1  # numbered from 1, like --shard k/N
     shards: int = 1
     max_units: int | None = None
     deadline_at: float | None = None  # epoch seconds; no unit starts that would end after it

@@ -80,8 +80,10 @@ class MeteredLLM:
     """Passes calls through, keeping every response and tracing it."""
 
     def __init__(self, inner: LLM, trace: TraceRecorder, ledger: Ledger | None,
-                 run_id: str, unit_id: str, clock: Clock):
+                 run_id: str, unit_id: str, clock: Clock,
+                 wait_s: Callable[[], float] = lambda: 0.0):
         self.inner = inner
+        self.wait_s = wait_s
         self.trace = trace
         self.ledger = ledger
         self.run_id = run_id
@@ -91,10 +93,13 @@ class MeteredLLM:
 
     def complete(self, messages: Sequence[Message], *, max_tokens: int,
                  temperature: float = 0.0, stop: Sequence[str] | None = None) -> LLMResponse:
+        waited = self.wait_s()
         resp = self.inner.complete(messages, max_tokens=max_tokens, temperature=temperature,
                                    stop=stop)
+        waited = self.wait_s() - waited
         self.responses.append(resp)
         self.trace.add("llm_call", {
+            "rate_limit_wait_s": round(waited, 3),
             "model": resp.model, "prompt_tokens": resp.prompt_tokens,
             "completion_tokens": resp.completion_tokens,
             "reasoning_tokens": resp.reasoning_tokens, "latency_s": resp.latency_s,
@@ -175,7 +180,8 @@ class BaselineExecutor:
         loaded = self.dataset.load(instance_id)
         trace = TraceRecorder(self.run_id, instance_id, self.clock)
         handle = self.llm_factory(instance_id)
-        llm = MeteredLLM(handle.llm, trace, handle.ledger, self.run_id, instance_id, self.clock)
+        llm = MeteredLLM(handle.llm, trace, handle.ledger, self.run_id, instance_id, self.clock,
+                         handle.rate_limit_wait_s)
         gate_cfg = GateConfig(timeout_s=cfg.gate_timeout_s)
         rejections: dict[str, int] = {}
         gate_checks = 0

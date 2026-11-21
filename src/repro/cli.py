@@ -252,5 +252,206 @@ def llm_soak(config_path: Path, route_id: str, n: int, hours: float, out: Path) 
                                                          hours=hours), secrets))
 
 
+# -- eval runner, status, report, export, show (M4) ----------------------------------
+
+RESULTS_OPT = click.option("--results-dir", type=click.Path(path_type=Path),
+                           default=Path("results"), show_default=True,
+                           help="Local results root (holds one directory per run id).")
+
+
+def _git_commit() -> str:
+    import subprocess
+
+    res = subprocess.run(["git", "rev-parse", "--short=12", "HEAD"], capture_output=True,
+                         text=True, check=False)
+    return res.stdout.strip() if res.returncode == 0 else ""
+
+
+def _deadline_at(deadline: str | None, minutes: float | None) -> float | None:
+    import datetime as dt
+    import time
+
+    if minutes is not None:
+        return time.time() + minutes * 60
+    if deadline is None:
+        return None
+    hh, _, mm = deadline.partition(":")
+    now = dt.datetime.now(dt.UTC)
+    at = now.replace(hour=int(hh), minute=int(mm or 0), second=0, microsecond=0)
+    if at <= now:
+        at += dt.timedelta(days=1)
+    return at.timestamp()
+
+
+def _dataset(cfg_dataset: str, fixtures_root: Path):  # type: ignore[no-untyped-def]
+    from repro.eval.execute import FixtureDataset
+
+    if cfg_dataset != "fixtures":
+        raise click.UsageError(f"dataset {cfg_dataset!r} arrives in M6; only fixtures for now")
+    return FixtureDataset(str(fixtures_root))
+
+
+@main.command("eval")
+@click.option("--config", "config_path", required=True,
+              type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option("--run-id", required=True, help="Results go to <results>/<run-id>/.")
+@RESULTS_OPT
+@click.option("--results-branch", "remote", default=None,
+              help="Git remote URL: commit each row to its `results` branch instead.")
+@click.option("--workdir", type=click.Path(path_type=Path),
+              default=Path(".repro/results-branch"), show_default=True,
+              help="Local clone used with --results-branch.")
+@click.option("--fixtures-root", type=click.Path(exists=True, file_okay=False, path_type=Path),
+              default=DEFAULT_FIXTURES, show_default=True)
+@click.option("--routes", "routes_path", type=click.Path(path_type=Path),
+              default=Path("config/routes.yaml"), show_default=True)
+@click.option("--max-units", type=int, default=None, help="Stop after N units.")
+@click.option("--deadline", default=None, help="HH:MM UTC; no unit starts that would end later.")
+@click.option("--deadline-minutes", type=float, default=None,
+              help="Like --deadline, counted from now.")
+@click.option("--shard", "shard_text", default="1/1", show_default=True, help="k/N")
+@click.option("--stop-when-exhausted", is_flag=True,
+              help="Exit cleanly when no route of the logical model has quota left.")
+def eval_cmd(config_path: Path, run_id: str, results_dir: Path, remote: str | None,
+             workdir: Path, fixtures_root: Path, routes_path: Path, max_units: int | None,
+             deadline: str | None, deadline_minutes: float | None, shard_text: str,
+             stop_when_exhausted: bool) -> None:
+    """Run a benchmark config in resumable batches."""
+    from repro.config import EvalConfig
+    from repro.eval.execute import BaselineExecutor
+    from repro.eval.llm_setup import cassette_factory, live_factory
+    from repro.eval.run import BatchOptions, ConfigMismatch, LockHeld, Runner
+    from repro.eval.store import GitStore, LocalStore, ResultsStore
+    from repro.llm.budget import Ledger, load_list_prices
+    from repro.llm.limiter import parse_shard
+    from repro.llm.registry import Registry
+
+    cfg = EvalConfig.from_yaml(config_path)
+    shard, shards = parse_shard(shard_text)
+    dataset = _dataset(cfg.dataset, fixtures_root)
+    ids = cfg.instances if cfg.instances is not None else dataset.ids()
+    store: ResultsStore = (GitStore(remote, run_id, workdir) if remote
+                           else LocalStore(results_dir, run_id))
+    verified = ""
+    if cfg.llm == "cassette":
+        if not cfg.cassette_dir:
+            raise click.UsageError("llm: cassette needs cassette_dir")
+        factory = cassette_factory(Path(cfg.cassette_dir),
+                                   Ledger(store.run_dir / f"ledger-{shard}.jsonl"))
+
+        def quota_ok() -> bool:
+            return True
+    else:
+        reg = Registry.from_yaml(routes_path)
+        factory, quota_ok = live_factory(cfg, reg, store.run_dir, run_id, shard, shards)
+        dates = [r.verified_on for r in reg.enabled_routes(cfg.logical_model) if r.verified_on]
+        verified = max(dates).isoformat() if dates else ""
+    if cfg.kind == "agent":
+        raise click.UsageError("the agent arrives in M5")
+    executor = BaselineExecutor(cfg, run_id, dataset, factory, prices=load_list_prices(),
+                                git_commit=_git_commit(), routes_verified_on=verified)
+    options = BatchOptions(shard=shard, shards=shards, max_units=max_units,
+                           deadline_at=_deadline_at(deadline, deadline_minutes),
+                           stop_when_exhausted=stop_when_exhausted)
+    try:
+        summary = Runner(cfg, run_id, ids, store, executor, options=options,
+                         quota_ok=quota_ok).run()
+    except (LockHeld, ConfigMismatch) as exc:
+        click.echo(f"error: {exc}", err=True)
+        raise SystemExit(2) from exc
+    click.echo(f"run {run_id} shard {shard}/{shards}: stopped ({summary.stop_reason}); "
+               f"{len(summary.written)} written, {len(summary.deferred)} deferred, "
+               f"{len(summary.infra_errors)} infra errors, {summary.skipped_done} already done, "
+               f"{summary.remaining} remaining")
+
+
+def _run_ids(run_dir: Path, fixtures_root: Path) -> list[str]:
+    from repro.config import EvalConfig
+
+    frozen = run_dir / "config.yaml"
+    if not frozen.exists():
+        raise click.UsageError(f"{run_dir} has no config.yaml; is the run id right?")
+    cfg = EvalConfig.from_yaml(frozen)
+    return cfg.instances if cfg.instances is not None else _dataset(cfg.dataset,
+                                                                    fixtures_root).ids()
+
+
+@main.command("status")
+@click.argument("run_id")
+@RESULTS_OPT
+@click.option("--fixtures-root", type=click.Path(exists=True, file_okay=False, path_type=Path),
+              default=DEFAULT_FIXTURES, show_default=True)
+@click.option("--shards", default=6, show_default=True, help="Shards per night, for the ETA.")
+def status_cmd(run_id: str, results_dir: Path, fixtures_root: Path, shards: int) -> None:
+    """Progress of a run: done, remaining, deferred, tokens, quota, nights left."""
+    from repro.eval.status import compute_status, render_status
+
+    run_dir = results_dir / run_id
+    st = compute_status(run_dir, _run_ids(run_dir, fixtures_root), shards=shards)
+    click.echo(render_status(run_id, st))
+
+
+@main.command("report")
+@click.option("--run", "run_ids", multiple=True, required=True, help="Run id (repeatable).")
+@RESULTS_OPT
+@click.option("--out", type=click.Path(dir_okay=False, path_type=Path), default=None,
+              help="Write the markdown here (plots go to plots/ beside it). Default: stdout.")
+@click.option("--title", default="Results", show_default=True)
+def report_cmd(run_ids: tuple[str, ...], results_dir: Path, out: Path | None, title: str) -> None:
+    """Results tables and plots from result rows only."""
+    from repro.eval.report import ReportError, build_report
+    from repro.eval.rows import read_rows
+    from repro.eval.store import shard_files
+
+    rows = [r for rid in run_ids for r in read_rows(shard_files(results_dir / rid))]
+    try:
+        text, plots = build_report(rows, title)
+    except ReportError as exc:
+        click.echo(f"error: {exc}", err=True)
+        raise SystemExit(2) from exc
+    if out is None:
+        click.echo(text, nl=False)
+        return
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(text)
+    (out.parent / "plots").mkdir(exist_ok=True)
+    for name, svg in plots.items():
+        (out.parent / "plots" / name).write_text(svg)
+    click.echo(f"wrote {out}")
+
+
+@main.command("export")
+@click.option("--run", "run_id", required=True)
+@RESULTS_OPT
+def export_cmd(run_id: str, results_dir: Path) -> None:
+    """Write predictions.jsonl in SWT-bench format into the run directory."""
+    from repro.eval.export import predictions_jsonl
+    from repro.eval.rows import read_rows
+    from repro.eval.store import shard_files
+
+    run_dir = results_dir / run_id
+    rows = read_rows(shard_files(run_dir))
+    if not rows:
+        raise click.UsageError(f"no rows in {run_dir}")
+    name = f"repro-{rows[0].config_id}"
+    (run_dir / "predictions.jsonl").write_text(predictions_jsonl(rows, run_dir, name))
+    click.echo(f"wrote {run_dir / 'predictions.jsonl'} ({len(rows)} instances)")
+
+
+@main.command("show")
+@click.argument("run_id")
+@click.argument("instance_id")
+@RESULTS_OPT
+def show_cmd(run_id: str, instance_id: str, results_dir: Path) -> None:
+    """Readable timeline of one unit's trace."""
+    from repro.eval.rows import read_trace
+    from repro.eval.show import render_trace
+
+    path = results_dir / run_id / "traces" / f"{instance_id}.jsonl"
+    if not path.exists():
+        raise click.UsageError(f"no trace at {path}")
+    click.echo(render_trace(read_trace(path)))
+
+
 if __name__ == "__main__":
     main()
