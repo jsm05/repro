@@ -132,3 +132,18 @@ def test_reply_in_reasoning_field_is_used_when_content_is_empty() -> None:
         with pytest.raises(LLMError) as exc:  # cut off mid-reasoning: still empty
             client.complete(MSGS, max_tokens=8000)
         assert exc.value.cls is ErrorClass.EMPTY_OUTPUT
+
+
+def test_native_tool_call_becomes_a_text_action() -> None:
+    """D-M5-12: a reply the provider parsed into tool_calls comes back as our action text."""
+    with FakeProvider() as fp:
+        r = ok(text="", completion_tokens=29)
+        r.body["choices"][0]["message"]["content"] = None
+        r.body["choices"][0]["message"]["tool_calls"] = [{
+            "id": "c1", "type": "function",
+            "function": {"name": "bash", "arguments": '{"cmd": "ls"}'}}]
+        r.body["choices"][0]["finish_reason"] = "tool_calls"
+        fp.push(r)
+        resp = OpenAICompatClient(_route(), fp.base_url, TEST_KEY).complete(MSGS, max_tokens=50)
+    assert resp.text_source == "tool_call" and '"tool": "bash"' in resp.text
+    assert '"cmd": "ls"' in resp.text and "tool_calls" in resp.raw_note

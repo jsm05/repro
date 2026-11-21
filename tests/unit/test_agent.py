@@ -513,3 +513,15 @@ def test_empty_assistant_turn_is_never_sent_empty() -> None:
     msgs = ctx.build("CARD", "", "").messages
     assert all(m["content"] for m in msgs)
     assert {"role": "assistant", "content": "(empty reply)"} in msgs
+
+
+def test_lenient_action_forms() -> None:
+    """D-M5-12: a missing closing fence and a bare JSON action are both accepted."""
+    unterminated = '```action\n{"tool": "bash", "args": {"cmd": "ls"}}'
+    assert parse_action(unterminated).args == {"cmd": "ls"}
+    bare = 'I will list files. {"tool": "bash", "args": {"cmd": "ls -R"}}'
+    assert parse_action(bare).args == {"cmd": "ls -R"}
+    with pytest.raises(ParseError, match="2 action blocks"):
+        parse_action('{"tool": "bash", "args": {}} then {"tool": "submit", "args": {}}')
+    with pytest.raises(ParseError):
+        parse_action('a dict without the key: {"cmd": "ls"}')
