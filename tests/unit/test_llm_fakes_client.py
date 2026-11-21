@@ -147,3 +147,17 @@ def test_native_tool_call_becomes_a_text_action() -> None:
         resp = OpenAICompatClient(_route(), fp.base_url, TEST_KEY).complete(MSGS, max_tokens=50)
     assert resp.text_source == "tool_call" and '"tool": "bash"' in resp.text
     assert '"cmd": "ls"' in resp.text and "tool_calls" in resp.raw_note
+
+
+def test_tools_sent_only_to_native_tool_routes() -> None:
+    """D-M5-13: tool schemas go out only on routes marked native_tools."""
+    from repro.agent.tools import TOOL_SCHEMAS
+
+    plain = OpenAICompatClient(_route(), "http://x", TEST_KEY)
+    native = OpenAICompatClient(_route(native_tools=True), "http://x", TEST_KEY)
+    assert "tools" not in plain.build_request(MSGS, max_tokens=5, tools=TOOL_SCHEMAS)
+    req = native.build_request(MSGS, max_tokens=5, tools=TOOL_SCHEMAS)
+    assert req["tool_choice"] == "auto"
+    assert [t["function"]["name"] for t in req["tools"]] == [
+        "bash", "view", "write_test", "check", "submit", "abstain"]
+    assert "tools" not in native.build_request(MSGS, max_tokens=5)  # baselines send none

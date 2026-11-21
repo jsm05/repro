@@ -80,7 +80,8 @@ class TimedLLM:
         self.waited = 0.0
 
     def complete(self, messages: Sequence[Message], *, max_tokens: int,
-                 temperature: float = 0.0, stop: Sequence[str] | None = None) -> LLMResponse:
+                 temperature: float = 0.0, stop: Sequence[str] | None = None,
+                 tools: Any = None) -> LLMResponse:
         self.clock.advance(self.active + self.model + self.wait)
         self.waited += self.wait
         r = self.inner.complete(messages, max_tokens=max_tokens, temperature=temperature)
