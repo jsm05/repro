@@ -17,11 +17,13 @@ from repro.baseline.retrieval import DirRepo, RepoFiles
 from repro.baseline.single_prompt import BaselineResult, run_b0
 from repro.config import EvalConfig
 from repro.datasets.fixtures import FixtureSource
-from repro.eval.rows import ResultRow, TraceEvent
+from repro.eval.rows import ResultRow
 from repro.eval.run import UnitOutput
+from repro.eval.trace import TraceRecorder
 from repro.gate.checks import GateConfig, OnlineGate, SandboxFactory
 from repro.llm.budget import BudgetExceeded, Ledger, LedgerEntry, list_price_usd
 from repro.llm.clock import Clock, RealClock
+from repro.llm.router import Deferred
 from repro.llm.tokens import TokenEstimator, chars_counter
 from repro.llm.types import LLM, LLMResponse, Message
 from repro.models import Candidate, Instance, InstanceOutcome
@@ -54,26 +56,6 @@ class FixtureDataset:
     def load(self, instance_id: str) -> LoadedInstance:
         fx = self.source.load(self._names[instance_id])
         return LoadedInstance(fx.instance, DirRepo(fx.repo_dir), local_factory(fx.repo_dir))
-
-
-class TraceRecorder:
-    """Trace events kept in memory and written with the row, so nothing partial lands."""
-
-    def __init__(self, run_id: str, instance_id: str, clock: Clock):
-        self.run_id = run_id
-        self.instance_id = instance_id
-        self.clock = clock
-        self.events: list[TraceEvent] = []
-
-    def add(self, type: str, payload: dict[str, Any] | None = None, route: str = "",
-            tokens: int = 0) -> None:
-        self.events.append(TraceEvent(
-            ts=self.clock.now(), run_id=self.run_id, instance_id=self.instance_id,
-            seq=len(self.events), type=type, payload=payload or {}, route=route, tokens=tokens,
-        ))
-
-    def jsonl(self) -> str:
-        return "".join(e.model_dump_json() + "\n" for e in self.events)
 
 
 class MeteredLLM:
@@ -138,7 +120,21 @@ def eval_estimator() -> TokenEstimator:
     return TokenEstimator(counter=chars_counter)
 
 
-class BaselineExecutor:
+@dataclass
+class MethodOutcome:
+    always: Candidate | None
+    gated: Candidate | None
+    gate_passed: bool | None
+    stop_reason: str
+    tokens_at: int | None
+    gate_checks: int = 0
+    rejections: dict[str, int] = field(default_factory=dict)
+    steps: int = 0
+
+
+class Executor:
+    """Runs one unit of any kind (B0, B1, agent) and builds its row."""
+
     def __init__(
         self,
         config: EvalConfig,
@@ -149,10 +145,9 @@ class BaselineExecutor:
         prices: dict[str, tuple[float, float] | None] | None = None,
         git_commit: str = "",
         routes_verified_on: str = "",
+        route_windows: Sequence[int] = (),
         clock: Clock | None = None,
     ):
-        if config.kind not in ("B0", "B1"):
-            raise ValueError(f"BaselineExecutor cannot run kind {config.kind}")
         self.config = config
         self.run_id = run_id
         self.dataset = dataset
@@ -160,6 +155,7 @@ class BaselineExecutor:
         self.prices = prices or {}
         self.git_commit = git_commit
         self.routes_verified_on = routes_verified_on
+        self.route_windows = list(route_windows)
         self.clock = clock or RealClock()
         self.estimator = eval_estimator()
 
@@ -174,21 +170,18 @@ class BaselineExecutor:
                          outcome_gated=InstanceOutcome.INFRA_ERROR, infra_error=reason,
                          stop_reason="infra_error")
 
-    def execute(self, instance_id: str) -> UnitOutput:
+    # -- methods ----------------------------------------------------------------------
+
+    def _baseline(self, loaded: LoadedInstance, llm: MeteredLLM,
+                  trace: TraceRecorder) -> MethodOutcome:
         cfg = self.config
-        t_start = time.monotonic()
-        loaded = self.dataset.load(instance_id)
-        trace = TraceRecorder(self.run_id, instance_id, self.clock)
-        handle = self.llm_factory(instance_id)
-        llm = MeteredLLM(handle.llm, trace, handle.ledger, self.run_id, instance_id, self.clock,
-                         handle.rate_limit_wait_s)
         gate_cfg = GateConfig(timeout_s=cfg.gate_timeout_s)
         rejections: dict[str, int] = {}
-        gate_checks = 0
+        checks = 0
 
         def gate(c: Candidate) -> bool:
-            nonlocal gate_checks
-            gate_checks += 1
+            nonlocal checks
+            checks += 1
             v = OnlineGate(loaded.factory, gate_cfg).verify(c)
             if v.failed_check:
                 rejections[v.failed_check] = rejections.get(v.failed_check, 0) + 1
@@ -213,27 +206,78 @@ class BaselineExecutor:
         gated = result.gated if result else None
         if not stop_reason:
             stop_reason = "candidate" if cand is not None else "no candidate"
+        tokens_at = None
+        if cand is not None and result is not None:
+            idx = next(i for i, s in enumerate(result.samples) if s is cand)
+            tokens_at = sum(r.total_tokens for r in llm.responses[: idx + 1])
+        if cfg.kind == "B0":
+            gated, gate_passed = cand, None
+        else:
+            gate_passed = (gated is not None) if cand is not None else None
+        return MethodOutcome(cand, gated, gate_passed, stop_reason, tokens_at, checks,
+                             rejections, len(llm.responses))
 
+    def _agent(self, loaded: LoadedInstance, llm: MeteredLLM, trace: TraceRecorder,
+               handle: LLMHandle) -> MethodOutcome:
+        from repro.agent.context import effective_prompt_cap
+        from repro.agent.loop import AgentLimits, AgentLoop
+        from repro.agent.tools import Workspace
+
+        cfg = self.config
+        limits = AgentLimits(
+            steps=cfg.max_steps, tokens=cfg.per_bug_tokens, requests=cfg.max_requests,
+            prompt_cap=effective_prompt_cap(cfg.prompt_cap, self.route_windows),
+            max_output=cfg.max_output_tokens, active_s=cfg.active_minutes * 60,
+            hard_cap_s=cfg.hard_cap_minutes * 60, gate_checks=cfg.max_gate_checks,
+            tool_errors=cfg.max_tool_errors, repeats=cfg.max_repeats,
+            prompt_version=cfg.prompt_version,
+        )
+        sandbox = loaded.factory()
+        try:
+            ws = Workspace(sandbox, loaded.repo, loaded.factory,
+                           GateConfig(timeout_s=cfg.gate_timeout_s))
+            res = AgentLoop(loaded.instance.public, ws, llm, self.estimator, self.clock, trace,
+                            limits, wait_s=handle.rate_limit_wait_s).run()
+        finally:
+            sandbox.close()
+        if res.state == "DEFERRED":
+            raise Deferred(0.0, "quota ran out mid-run; the unit will rerun from scratch")
+        return MethodOutcome(res.best, res.gated,
+                             res.best_passed if res.best is not None else None,
+                             res.stop_reason, res.best_tokens_at, res.gate_checks,
+                             res.rejections, res.steps)
+
+    # -- one unit ---------------------------------------------------------------------
+
+    def execute(self, instance_id: str) -> UnitOutput:
+        cfg = self.config
+        t_start = time.monotonic()
+        loaded = self.dataset.load(instance_id)
+        trace = TraceRecorder(self.run_id, instance_id, self.clock)
+        handle = self.llm_factory(instance_id)
+        llm = MeteredLLM(handle.llm, trace, handle.ledger, self.run_id, instance_id, self.clock,
+                         handle.rate_limit_wait_s)
+        if cfg.kind == "agent":
+            m = self._agent(loaded, llm, trace, handle)
+        else:
+            m = self._baseline(loaded, llm, trace)
+        cand = m.always
+
+        if cand is not None:
+            trace.add("freeze", {"candidate_sha256": cand.sha256, "test_ids": cand.test_ids})
         verdict = run_oracle(cand, loaded.instance.sealed.gold_fix_patch, loaded.factory,
-                             gate_cfg)
+                             GateConfig(timeout_s=cfg.gate_timeout_s))
         trace.add("oracle", {"outcome": verdict.outcome.value, "reason": verdict.reason,
                              "transitions": {t: tr.label for t, tr in
                                              verdict.transitions.items()}})
         outcome = verdict.outcome
-        if cfg.kind == "B0":
-            outcome_gated, gate_passed = outcome, None
+        same = m.gated is not None and cand is not None and m.gated.sha256 == cand.sha256
+        if same or outcome is InstanceOutcome.INFRA_ERROR:
+            outcome_gated = outcome
         else:
-            outcome_gated = outcome if gated is not None else (
-                InstanceOutcome.INFRA_ERROR if outcome is InstanceOutcome.INFRA_ERROR
-                else InstanceOutcome.NO_TEST)
-            gate_passed = (gated is not None) if cand is not None else None
-        trace.add("stop", {"reason": stop_reason})
+            outcome_gated = InstanceOutcome.NO_TEST
 
         responses = llm.responses
-        tokens_at = None
-        if cand is not None and result is not None:
-            idx = next(i for i, s in enumerate(result.samples) if s is cand)
-            tokens_at = sum(r.total_tokens for r in responses[: idx + 1])
         route_calls: dict[str, int] = {}
         for r in responses:
             route_calls[r.route_id] = route_calls.get(r.route_id, 0) + 1
@@ -248,14 +292,14 @@ class BaselineExecutor:
             mixed=mixed,
             outcome=outcome,
             outcome_gated=outcome_gated,
-            gate_passed=gate_passed,
-            stop_reason=stop_reason,
+            gate_passed=m.gate_passed,
+            stop_reason=m.stop_reason,
             candidate_sha256=cand.sha256 if cand else "",
-            candidate_tokens_at=tokens_at,
-            gate_rejections=dict(sorted(rejections.items())),
+            candidate_tokens_at=m.tokens_at,
+            gate_rejections=dict(sorted(m.rejections.items())),
             oracle_transitions={t: tr.label for t, tr in sorted(verdict.transitions.items())},
-            steps=len(responses),
-            gate_checks=gate_checks,
+            steps=m.steps,
+            gate_checks=m.gate_checks,
             requests=len(responses),
             retries=sum(r.retries for r in responses),
             tokens_in=sum(r.prompt_tokens for r in responses),
@@ -272,3 +316,6 @@ class BaselineExecutor:
             files[f"candidates/{instance_id}.json"] = json.dumps(
                 {"test_ids": cand.test_ids, "origin": cand.origin}, sort_keys=True) + "\n"
         return UnitOutput(row, files)
+
+
+BaselineExecutor = Executor  # name used before the agent existed

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
+from typing import Literal
 
 from repro.config import EvalConfig
 from repro.eval.execute import LLMFactory, LLMHandle, eval_estimator
@@ -17,14 +18,41 @@ from repro.llm.registry import Registry
 from repro.llm.router import RoutedLLM, Router
 
 
-def cassette_factory(cassette_dir: Path, ledger: Ledger) -> LLMFactory:
+def cassette_factory(cassette_dir: Path, ledger: Ledger,
+                     match: Literal["request", "order"] = "request") -> LLMFactory:
     """One cassette file per instance: <dir>/<instance_id>.jsonl, replay only."""
 
     def make(instance_id: str) -> LLMHandle:
-        return LLMHandle(CassetteLLM(cassette_dir / f"{instance_id}.jsonl", "replay"),
-                         ledger=ledger)
+        return LLMHandle(CassetteLLM(cassette_dir / f"{instance_id}.jsonl", "replay",
+                                     match=match), ledger=ledger)
 
     return make
+
+
+def recording(factory: LLMFactory, cassette_dir: Path) -> LLMFactory:
+    """Wrap a live factory so every response is also written to the instance's cassette.
+    The file is restarted at the beginning of each unit, so a retried unit's cassette
+    holds only its last attempt."""
+
+    def make(instance_id: str) -> LLMHandle:
+        handle = factory(instance_id)
+        path = cassette_dir / f"{instance_id}.jsonl"
+        path.unlink(missing_ok=True)
+        handle.llm = CassetteLLM(path, "record", handle.llm)
+        return handle
+
+    return make
+
+
+def chain_logicals(cfg: EvalConfig, registry: Registry) -> list[str]:
+    """Logical models the config may use; under `chain`, those with no enabled route are
+    skipped (e.g. a disabled OpenRouter route)."""
+    if cfg.policy == "pinned":
+        return [cfg.logical_model]
+    usable = [m for m in registry.chain(cfg.logical_model) if registry.enabled_routes(m)]
+    if not usable:
+        raise ValueError(f"chain {cfg.logical_model!r} has no logical model with an enabled route")
+    return usable
 
 
 def live_factory(
@@ -41,8 +69,7 @@ def live_factory(
     run_budget = RunBudget(ledger, run_id, cfg.run_tokens)
     clients = make_client_factory(registry)
     estimator = eval_estimator()
-    logicals = ([cfg.logical_model] if cfg.policy == "pinned"
-                else registry.chain(cfg.logical_model))
+    logicals = chain_logicals(cfg, registry)
     for logical in logicals:
         registry.validate_for_eval(logical)
 

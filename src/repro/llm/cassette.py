@@ -4,6 +4,10 @@ Requests are keyed by a hash of their content. The same request may legitimately
 made several times (B1 draws 5 samples from one prompt), so each key holds a list
 of responses replayed in order. Replay never falls through to a live call: a request
 with no recording is an error.
+
+`match="order"` replays responses in recorded order whatever the request. The agent
+needs it: its prompts contain tool output (timings, temp paths) that differs between
+runs, while its replayed actions are executed for real each time.
 """
 
 from __future__ import annotations
@@ -40,12 +44,15 @@ class CassetteLLM:
         path: str | Path,
         mode: Literal["record", "replay"],
         inner: LLM | None = None,
+        match: Literal["request", "order"] = "request",
     ):
         if mode == "record" and inner is None:
             raise ValueError("record mode needs an inner LLM")
         self.path = Path(path)
         self.mode = mode
         self.inner = inner
+        self.match = match
+        self._order: list[dict[str, Any]] = []
         self._recorded: dict[str, list[dict[str, Any]]] = defaultdict(list)
         self._cursor: dict[str, int] = defaultdict(int)
         if mode == "replay":
@@ -53,6 +60,7 @@ class CassetteLLM:
                 if line.strip():
                     rec = json.loads(line)
                     self._recorded[rec["key"]].append(rec["response"])
+                    self._order.append(rec["response"])
 
     def complete(
         self,
@@ -63,6 +71,13 @@ class CassetteLLM:
         stop: Sequence[str] | None = None,
     ) -> LLMResponse:
         key = request_key(messages, max_tokens, temperature, stop)
+        if self.mode == "replay" and self.match == "order":
+            i = self._cursor["__order__"]
+            if i >= len(self._order):
+                raise CassetteMiss(f"cassette has only {len(self._order)} responses; "
+                                   "replay mode never calls a provider")
+            self._cursor["__order__"] += 1
+            return LLMResponse.model_validate(self._order[i])
         if self.mode == "replay":
             responses = self._recorded.get(key, [])
             i = self._cursor[key]

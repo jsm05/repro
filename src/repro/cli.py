@@ -318,8 +318,8 @@ def eval_cmd(config_path: Path, run_id: str, results_dir: Path, remote: str | No
              stop_when_exhausted: bool) -> None:
     """Run a benchmark config in resumable batches."""
     from repro.config import EvalConfig
-    from repro.eval.execute import BaselineExecutor
-    from repro.eval.llm_setup import cassette_factory, live_factory
+    from repro.eval.execute import Executor
+    from repro.eval.llm_setup import cassette_factory, chain_logicals, live_factory, recording
     from repro.eval.run import BatchOptions, ConfigMismatch, LockHeld, Runner
     from repro.eval.store import GitStore, LocalStore, ResultsStore
     from repro.llm.budget import Ledger, load_list_prices
@@ -333,23 +333,30 @@ def eval_cmd(config_path: Path, run_id: str, results_dir: Path, remote: str | No
     store: ResultsStore = (GitStore(remote, run_id, workdir) if remote
                            else LocalStore(results_dir, run_id))
     verified = ""
+    windows: list[int] = []
     if cfg.llm == "cassette":
         if not cfg.cassette_dir:
             raise click.UsageError("llm: cassette needs cassette_dir")
         factory = cassette_factory(Path(cfg.cassette_dir),
-                                   Ledger(store.run_dir / f"ledger-{shard}.jsonl"))
+                                   Ledger(store.run_dir / f"ledger-{shard}.jsonl"),
+                                   cfg.cassette_match)
 
         def quota_ok() -> bool:
             return True
     else:
         reg = Registry.from_yaml(routes_path)
         factory, quota_ok = live_factory(cfg, reg, store.run_dir, run_id, shard, shards)
-        dates = [r.verified_on for r in reg.enabled_routes(cfg.logical_model) if r.verified_on]
+        if cfg.llm == "record":
+            if not cfg.cassette_dir:
+                raise click.UsageError("llm: record needs cassette_dir")
+            factory = recording(factory, Path(cfg.cassette_dir))
+        routes = [r for m in chain_logicals(cfg, reg) for r in reg.enabled_routes(m)]
+        dates = [r.verified_on for r in routes if r.verified_on]
         verified = max(dates).isoformat() if dates else ""
-    if cfg.kind == "agent":
-        raise click.UsageError("the agent arrives in M5")
-    executor = BaselineExecutor(cfg, run_id, dataset, factory, prices=load_list_prices(),
-                                git_commit=_git_commit(), routes_verified_on=verified)
+        windows = [r.context_window for r in routes]
+    executor = Executor(cfg, run_id, dataset, factory, prices=load_list_prices(),
+                        git_commit=_git_commit(), routes_verified_on=verified,
+                        route_windows=windows)
     options = BatchOptions(shard=shard, shards=shards, max_units=max_units,
                            deadline_at=_deadline_at(deadline, deadline_minutes),
                            stop_when_exhausted=stop_when_exhausted)
