@@ -1,6 +1,6 @@
-"""Export SWT-bench Verified dataset rows for some instances to JSONL (needs `datasets`
-and network; runs in Actions). The rows hold sealed fields (the fix, the real tests), so
-the file stays on the runner and is never committed.
+"""Export SWE-bench Verified dataset rows for SWT-bench Verified instances to JSONL
+(needs `datasets` and network; runs in Actions). The rows hold sealed fields (the fix,
+the real tests), so the file stays on the runner and is never committed.
 
     python scripts/export_instances.py --ids-file eval/samples/pilot_10.txt \
         --out eval/data/swt_records.jsonl
@@ -14,7 +14,8 @@ import json
 import sys
 from pathlib import Path
 
-DATASET = "nmuendler/SWT-Bench_Verified_bm25_27k_zsp"
+# The original SWE-bench rows: the SWT bm25 variant's patches failed to parse (D-M6-12).
+DATASET = "princeton-nlp/SWE-bench_Verified"
 KEEP = ["repo", "instance_id", "base_commit", "patch", "test_patch", "problem_statement",
         "hints_text", "created_at", "version", "FAIL_TO_PASS", "PASS_TO_PASS",
         "environment_setup_commit"]

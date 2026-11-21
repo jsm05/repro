@@ -85,8 +85,8 @@ jobs:
       - name: Score one instance
         working-directory: /tmp/swt-bench
         run: |
-          python -m src.main --dataset_name nmuendler/SWT-Bench_Verified_bm25_27k_zsp \
-            --is_swt true --predictions_path /tmp/preds/predictions.jsonl --max_workers 1 \
+          python -m src.main --dataset_name princeton-nlp/SWE-bench_Verified \
+            --is_swt false --compute_coverage false --predictions_path /tmp/preds/predictions.jsonl --max_workers 1 \
             --instance_ids "$INSTANCE" --run_id "$RUN_ID-official"
       - name: Upload the harness output
         if: always()

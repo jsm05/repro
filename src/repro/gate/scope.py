@@ -85,13 +85,50 @@ def _strip_prefix(raw: str) -> str | None:
     return path
 
 
+def _lines(diff: str) -> list[str]:
+    """Split on newlines only: str.splitlines() also splits on form feeds and other
+    separators that appear inside source lines, which breaks hunk counts."""
+    lines = diff.split("\n")
+    if lines and lines[-1] == "":
+        lines.pop()
+    return lines
+
+
+def repair_patch(diff: str) -> str:
+    """Restore trailing blank context lines that were trimmed off the end of a patch
+    (a stripped dataset string), and the final newline. Anything else is left alone."""
+    lines = _lines(diff)
+    old_left = new_left = 0
+    in_hunk = False
+    for line in lines:
+        if in_hunk and (old_left > 0 or new_left > 0):
+            tag = line[:1] or " "
+            if tag == " ":
+                old_left, new_left = old_left - 1, new_left - 1
+            elif tag == "-":
+                old_left -= 1
+            elif tag == "+":
+                new_left -= 1
+            continue
+        m = _HUNK.match(line) if line.startswith("@@") else None
+        if m:
+            in_hunk = True
+            old_left = int(m.group(2)) if m.group(2) is not None else 1
+            new_left = int(m.group(4)) if m.group(4) is not None else 1
+        else:
+            in_hunk = False
+    if in_hunk and old_left == new_left and old_left > 0:
+        lines += [" "] * old_left
+    return "\n".join(lines) + "\n"
+
+
 def parse_diff(diff: str) -> list[FileDiff]:
     """Parse a git-style or plain unified diff."""
     files: list[FileDiff] = []
     cur: FileDiff | None = None
     hunk: Hunk | None = None
     old_left = new_left = 0
-    for line in diff.splitlines():
+    for line in _lines(diff):
         if hunk is not None and (old_left > 0 or new_left > 0):
             tag = line[:1]
             if line == "":

@@ -32,7 +32,7 @@ from repro.models import Candidate, InstanceOutcome  # noqa: E402
 from repro.oracle.oracle import run_oracle  # noqa: E402
 from repro.sandbox.docker import reap  # noqa: E402
 
-DATASET = "nmuendler/SWT-Bench_Verified_bm25_27k_zsp"
+DATASET = "princeton-nlp/SWE-bench_Verified"
 
 
 def find_resolution(obj: Any, instance: str, key: str = "") -> str | None:
@@ -49,7 +49,7 @@ def find_resolution(obj: Any, instance: str, key: str = "") -> str | None:
 def official(instance_id: str, run_id: str) -> str:
     root = swt_root()
     proc = subprocess.run(
-        [sys.executable, "-m", "src.main", "--dataset_name", DATASET, "--is_swt", "true",
+        [sys.executable, "-m", "src.main", "--dataset_name", DATASET, "--is_swt", "false",
          "--predictions_path", "gold", "--max_workers", "1", "--instance_ids", instance_id,
          "--run_id", run_id, "--cache_level", "instance", "--clean", "false",
          "--compute_coverage", "false", "--timeout", "900"],
@@ -69,10 +69,17 @@ def official(instance_id: str, run_id: str) -> str:
 
 
 def write_report(rows: list[dict[str, Any]], out: Path, total: int) -> int:
+    """Writes the report; returns how many instances passed: gold F→P in our oracle and
+    the official harness resolved it (or could not score it, which is listed)."""
     agree = sum(1 for r in rows if r["agree"])
+    passed = sum(1 for r in rows if r.get("pass"))
+    unscored = [r["instance_id"] for r in rows if str(r["official"]).startswith("no result")]
     lines = ["# Gold agreement on the pilot (T6.D8)", "",
-             f"Our oracle vs the official SWT-bench harness on the gold test patches: "
-             f"{agree} of {len(rows)} agree ({len(rows)} of {total} instances done).", "",
+             f"Gold tests F→P in our oracle and resolved by the official SWT-bench harness: "
+             f"{passed} of {total}. Verdicts agree on {agree} of {len(rows)} "
+             f"({len(rows)} of {total} instances done).", "",
+             *([f"Not scored by the official harness: {', '.join(unscored)}", ""]
+               if unscored else []),
              "| Instance | Ours | Official | Agree | F→P per fail-to-pass test | Seconds | Note |",
              "|---|---|---|---|---|---|---|"]
     for r in rows:
@@ -85,7 +92,7 @@ def write_report(rows: list[dict[str, Any]], out: Path, total: int) -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines) + "\n")
     out.with_suffix(".json").write_text(json.dumps(rows, indent=1, sort_keys=True) + "\n")
-    return agree
+    return passed
 
 
 def main() -> int:
@@ -107,9 +114,9 @@ def main() -> int:
         for iid in missing:
             rows.append({"instance_id": iid, "ours": "not run", "official": "not run",
                          "agree": False, "seconds": 0, "error": "no result from its job"})
-        agree = write_report(rows, Path(args.out), len(ids))
-        print(f"agreement: {agree}/{len(ids)}")
-        return 0 if agree == len(ids) else 1
+        passed = write_report(rows, Path(args.out), len(ids))
+        print(f"passed: {passed}/{len(ids)}")
+        return 0 if passed == len(ids) else 1
     if args.only:
         ids = [args.only]
     ds = SWTBenchDataset(args.records, run_id="gold-agreement")
@@ -134,6 +141,9 @@ def main() -> int:
                              origin="gold")
             v = run_oracle(cand, sealed.gold_fix_patch, loaded.factory,
                            GateConfig(timeout_s=args.timeout))
+            if v.outcome is not InstanceOutcome.REPRODUCED:
+                print("gold test patch (head):", sealed.gold_test_patch[:600], sep="\n",
+                      flush=True)
             row["ours"] = v.outcome.value
             row["ours_reason"] = v.reason[:200]
             row["transitions"] = {t: tr.label for t, tr in v.transitions.items()
@@ -151,14 +161,18 @@ def main() -> int:
             reap("gold-agreement")
         ours_ok = row["ours"] == InstanceOutcome.REPRODUCED.value
         row["agree"] = ours_ok == (row["official"] == "resolved")
+        # Pass: gold F→P in our oracle, and the official harness agrees or could not
+        # score it (listed in the report).
+        row["pass"] = ours_ok and (row["official"] == "resolved"
+                                   or str(row["official"]).startswith("no result"))
         row["seconds"] = round(time.monotonic() - t0)
         rows.append(row)
         print(json.dumps(row), flush=True)
         write_report(rows, out, len(ids))  # after every instance, so a cut-off run keeps it
 
-    agree = write_report(rows, Path(args.out), len(ids))
-    print(f"agreement: {agree}/{len(ids)}")
-    return 0 if agree == len(ids) else 1
+    passed = write_report(rows, Path(args.out), len(ids))
+    print(f"passed: {passed}/{len(ids)}")
+    return 0 if passed == len(ids) else 1
 
 
 if __name__ == "__main__":

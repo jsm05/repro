@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import difflib
 import os
+import re
 from collections.abc import Callable, Sequence
 from pathlib import Path
 
@@ -38,10 +39,15 @@ def _terminate(lines: list[str]) -> list[str]:
     return out
 
 
+def _keep_lines(text: str) -> list[str]:
+    """Lines with their newline, split on \\n only (not on form feeds and the like)."""
+    return re.findall(r"[^\n]*\n|[^\n]+$", text)
+
+
 def file_diff(path: str, old: str | None, new: str) -> str:
     if old == new:
         return ""
-    new_lines = new.splitlines(keepends=True)
+    new_lines = _keep_lines(new)
     if old is None:
         header = (
             f"diff --git a/{path} b/{path}\nnew file mode 100644\n--- /dev/null\n+++ b/{path}\n"
@@ -50,7 +56,7 @@ def file_diff(path: str, old: str | None, new: str) -> str:
         return header + "".join(_terminate(["+" + ln for ln in new_lines]))
     body = list(
         difflib.unified_diff(
-            old.splitlines(keepends=True), new_lines, fromfile=f"a/{path}", tofile=f"b/{path}"
+            _keep_lines(old), new_lines, fromfile=f"a/{path}", tofile=f"b/{path}"
         )
     )
     return f"diff --git a/{path} b/{path}\n" + "".join(_terminate(body))

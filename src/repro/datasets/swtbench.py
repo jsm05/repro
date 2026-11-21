@@ -1,9 +1,9 @@
 """SWT-bench Verified instances: records -> Instance, images, and per-instance cleanup.
 
-Records are the dataset rows (nmuendler/SWT-Bench_Verified_bm25_27k_zsp), exported to
-a JSONL file in Actions. `patch` is the real fix, `test_patch` the real tests; both are
-sealed, as are `hints_text` and the fail-to-pass names. The agent's view carries only
-the issue text, repo, base commit and the test framework.
+Records are SWE-bench Verified dataset rows for the SWT-bench Verified instances,
+exported to a JSONL file in Actions (D-M6-12). `patch` is the real fix, `test_patch` the
+real tests; both are sealed, as are `hints_text` and the fail-to-pass names. The agent's
+view carries only the issue text, repo, base commit and the test framework.
 
 Images: SWT-bench builds `exec.eval.*` instance images (D-E0-1). Before any sandbox
 starts, Repro derives a hardened image from it once per instance: `.git` replaced by a
@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from repro.datasets import swt_harness as swt
-from repro.gate.scope import parse_diff
+from repro.gate.scope import parse_diff, repair_patch
 from repro.models import AgentView, Instance, SealedView, TestCmdSpec
 from repro.sandbox import docker as dk
 from repro.sandbox.base import Sandbox
@@ -119,7 +119,7 @@ def record_to_instance(rec: dict[str, Any]) -> tuple[Instance, HarnessSpec, list
     fail-to-pass names that could not be turned into test ids (kept out, reported)."""
     repo, version = str(rec["repo"]), str(rec["version"])
     fw = swt.framework(repo)
-    test_patch = str(rec["test_patch"])
+    test_patch = repair_patch(str(rec["test_patch"]))
     f2p, p2p, unmapped = [], [], []
     for name in _names(rec.get("FAIL_TO_PASS")):
         tid = to_test_id(fw, name, test_patch)
@@ -137,7 +137,8 @@ def record_to_instance(rec: dict[str, Any]) -> tuple[Instance, HarnessSpec, list
         test_cmd_spec=TestCmdSpec(framework=fw, test_dirs=[]),
     )
     sealed = SealedView(
-        gold_fix_patch=strip_patch_tags(str(rec["patch"])), gold_test_patch=test_patch,
+        gold_fix_patch=repair_patch(strip_patch_tags(str(rec["patch"]))),
+        gold_test_patch=test_patch,
         fail_to_pass=f2p, pass_to_pass=p2p, hints_text=str(rec.get("hints_text") or ""),
     )
     harness = HarnessSpec(repo=repo, version=version, framework=fw,
