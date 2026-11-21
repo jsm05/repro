@@ -8,12 +8,14 @@ only when the baseline prompt or the fixtures change, then regenerate the report
     python scripts/record_fixture_cassettes.py
     repro eval --config eval/configs/fixtures-b0.yaml --run-id fx-b0 --results-dir /tmp/fx
     repro eval --config eval/configs/fixtures-b1.yaml --run-id fx-b1 --results-dir /tmp/fx
-    repro report --run fx-b0 --run fx-b1 --results-dir /tmp/fx \
+    repro eval --config eval/configs/fixtures-a.yaml --run-id fx-a --results-dir /tmp/fx
+    repro report --run fx-b0 --run fx-b1 --run fx-a --results-dir /tmp/fx \
         --title "Fixture results (cassette replay)" --out eval/reports/fixtures.md
 """
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -57,6 +59,62 @@ B1 = {
 }
 
 
+def act(tool: str, **args: object) -> str:
+    return f"Next step.\n```action\n{json.dumps({'tool': tool, 'args': args})}\n```\n"
+
+
+# The agent's scripted actions per fixture; "gold" writes the fixture's real test.
+AGENT = {
+    "f01_off_by_one": [act("view", path="pager/pages.py"), "gold", act("check"),
+                       act("submit")],
+    "f02_raises": [act("bash", cmd="grep -rn 'def ' --include=*.py ."), "gold", act("check"),
+                   act("submit")],
+    "f03_wrong_reason_trap": ["passes", act("check"),
+                              act("abstain", reason="my test does not fail on this code")],
+    "f06_two_modules": [act("bash", cmd="ls -R"), "gold", act("check"), act("submit")],
+}
+
+
+def gold_file(source: FixtureSource, name: str) -> tuple[str, str, str]:
+    fx = source.load(name)
+    path = parse_diff(fx.instance.sealed.gold_test_patch)[0].path
+    with LocalSandbox(fx.repo_dir) as sb:
+        original = sb.get_file(path).decode() if (fx.repo_dir / path).exists() else ""
+        assert sb.apply_patch(fx.instance.sealed.gold_test_patch).ok
+        code = sb.get_file(path).decode()[len(original):]
+    return path, code.strip() + "\n", "append" if original else "new"
+
+
+def record_agent(config_path: Path, plan: dict[str, list[str]]) -> None:
+    """Order-matched cassettes: the replies in sequence, no request keys needed."""
+    cfg = EvalConfig.from_yaml(config_path)
+    assert cfg.cassette_dir is not None and cfg.cassette_match == "order"
+    out_dir = ROOT / cfg.cassette_dir
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for old in out_dir.glob("*.jsonl"):
+        old.unlink()
+    source = FixtureSource(FIXTURES)
+    for name, steps in plan.items():
+        view = source.load(name).instance.public
+        lines = []
+        for step in steps:
+            if step == "gold":
+                path, code, mode = gold_file(source, name)
+                text = act("write_test", path=path, content=code, mode=mode)
+            elif step == "passes":
+                text = act("write_test", path="tests/test_repro_issue.py",
+                           content="def test_issue_reproduced():\n    assert True\n", mode="new")
+            else:
+                text = step
+            resp = LLMResponse(text=text, prompt_tokens=1500, completion_tokens=len(text) // 4,
+                               finish_reason="stop", route_id="fake/recorded",
+                               model="fake-model")
+            lines.append(json.dumps({"key": "", "request": None,
+                                     "response": resp.model_dump()}, sort_keys=True))
+        (out_dir / f"{view.instance_id}.jsonl").write_text("\n".join(lines) + "\n")
+        print(f"{cfg.config_id}: {view.instance_id}: {len(steps)} replies")
+
+
 def gold_answer(source: FixtureSource, name: str) -> str:
     fx = source.load(name)
     path = parse_diff(fx.instance.sealed.gold_test_patch)[0].path
@@ -97,3 +155,4 @@ def record(config_path: Path, plan: dict[str, list[str]]) -> None:
 if __name__ == "__main__":
     record(ROOT / "eval/configs/fixtures-b0.yaml", B0)
     record(ROOT / "eval/configs/fixtures-b1.yaml", B1)
+    record_agent(ROOT / "eval/configs/fixtures-a.yaml", AGENT)

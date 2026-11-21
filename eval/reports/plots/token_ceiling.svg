@@ -16,10 +16,13 @@
 <text x="322.5" y="276" text-anchor="middle">400K</text>
 <text x="410.0" y="276" text-anchor="middle">600K</text>
 <text x="235.0" y="294" text-anchor="middle">per-bug token ceiling</text>
-<polyline points="60.0,110.0 147.5,110.0 235.0,110.0 322.5,110.0 410.0,110.0" fill="none" stroke="#2563eb" stroke-width="2"/>
+<polyline points="60.0,80.0 147.5,80.0 235.0,80.0 322.5,80.0 410.0,80.0" fill="none" stroke="#2563eb" stroke-width="2"/>
 <line x1="422" y1="26" x2="438" y2="26" stroke="#2563eb" stroke-width="2"/>
-<text x="442" y="30">fixtures-b0</text>
-<polyline points="60.0,80.0 147.5,80.0 235.0,80.0 322.5,80.0 410.0,80.0" fill="none" stroke="#dc2626" stroke-width="2"/>
+<text x="442" y="30">fixtures-a</text>
+<polyline points="60.0,110.0 147.5,110.0 235.0,110.0 322.5,110.0 410.0,110.0" fill="none" stroke="#dc2626" stroke-width="2"/>
 <line x1="422" y1="40" x2="438" y2="40" stroke="#dc2626" stroke-width="2"/>
-<text x="442" y="44">fixtures-b1</text>
+<text x="442" y="44">fixtures-b0</text>
+<polyline points="60.0,80.0 147.5,80.0 235.0,80.0 322.5,80.0 410.0,80.0" fill="none" stroke="#16a34a" stroke-width="2"/>
+<line x1="422" y1="54" x2="438" y2="54" stroke="#16a34a" stroke-width="2"/>
+<text x="442" y="58">fixtures-b1</text>
 </svg>

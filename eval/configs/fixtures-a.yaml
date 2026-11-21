@@ -1,0 +1,18 @@
+# The agent on the same 4 fixtures as fixtures-b1, replaying scripted actions in order
+# (cassette_match: order). The actions run for real against the fixture repos; only the
+# model replies are scripted. Paired with fixtures-b0 and fixtures-b1 in the report.
+config_id: fixtures-a
+kind: agent
+dataset: fixtures
+instances:
+  - fixture__f01_off_by_one
+  - fixture__f02_raises
+  - fixture__f03_wrong_reason_trap
+  - fixture__f06_two_modules
+logical_model: fake-recorded
+policy: pinned
+llm: cassette
+cassette_dir: eval/cassettes/fixtures-a
+cassette_match: order
+max_output_tokens: 8000
+gate_timeout_s: 30.0
