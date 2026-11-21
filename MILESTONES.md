@@ -254,10 +254,10 @@ If this session runs long, B1 moves to M4. Nothing else moves.
 - Live fixture run: `live-smoke.yml` gains a `fixtures` mode that runs `A-chain` on the 8 fixtures with `LocalSandbox` (no Docker needed) and commits the cassettes to `eval/cassettes/`.
 
 **Done when**
-- [ ] Scripted `FakeLLM` scenarios cover every stop condition and terminal state (T5.1 to T5.13)
-- [ ] Trimming and protocol tests pass: cap never exceeded, pinned items always present, stubs replace old outputs in order, parse failures handled (T5.12, T5.18 to T5.23)
-- [ ] One agent run yields both gated and always-emit results
-- [ ] Agent config plugs into `repro eval` on fixtures and shows up in the report next to B0 and B1
+- [x] Scripted `FakeLLM` scenarios cover every stop condition and terminal state (T5.1 to T5.13)
+- [x] Trimming and protocol tests pass: cap never exceeded, pinned items always present, stubs replace old outputs in order, parse failures handled (T5.12, T5.18 to T5.23)
+- [x] One agent run yields both gated and always-emit results
+- [x] Agent config plugs into `repro eval` on fixtures and shows up in the report next to B0 and B1
 - [ ] Live fixture run in Actions completed, cassettes committed, and the hermetic suite replays them
 
 **Explain it:** List the stop conditions and what each protects against. What does the state card contain and why does trimming need it? What happens when quota runs out halfway through an agent run? Why a shell tool?

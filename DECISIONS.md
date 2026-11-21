@@ -144,3 +144,33 @@ In B1 the gated candidate is either the always-emit candidate or nothing, so one
 
 **D-M4-10. Not in M4: the SWT-bench dataset (M6) and the agent executor (M5).**
 `repro eval` refuses `dataset: swtbench` and `kind: agent` with a clear message. The live model path (router, quota, ledger, `--stop-when-exhausted`) is wired and type-checked but only exercised with fakes until M6. The hermetic suite now takes about 2 min 15 s; the golden end-to-end test is about 28 s of that.
+
+## 2026-11-21, M5
+
+**D-M5-1. Agent cassettes replay in recorded order, not by request hash.**
+The agent's prompts contain tool output (pytest timings, temporary sandbox paths) that differs from run to run, so a request-hash key would never match on replay. With `cassette_match: order` the replies come back in sequence and the actions in them are executed for real each time. Baselines keep request-hash matching. A recorded unit's cassette is restarted at the start of each attempt, so a retried unit holds only its last attempt.
+
+**D-M5-2. Parse failures: the first gets a repair message, the second in a row counts as a tool error.**
+DESIGN 5.5 says a parse failure counts as a tool error; TEST_SPEC T5.22 says only the second consecutive one does. I followed T5.22: one malformed reply should cost a repair message, not a strike. Two action blocks in one reply are a parse error.
+
+**D-M5-3. LocalSandbox blocks HTTP through dead proxy settings; real isolation comes with Docker.**
+LocalSandbox has no network namespace. The bash tool sets every proxy variable to a closed local port, so curl, pip and urllib fail (T5.17). Code that opens raw sockets could still get out, which is acceptable only because LocalSandbox runs our own fixtures. Benchmark instances run in DockerSandbox with the network off (M6).
+
+**D-M5-4. The candidate is the files written with `write_test`, read back from the workspace.**
+Only paths the agent wrote with `write_test` go into the diff; their current contents are read from Sandbox A, so a later bash edit to the same file is included and anything else the agent changed is ignored. `conftest.py` and non-test paths are refused, and `mode: new` on a file that already exists in the repo is refused (use append).
+
+**D-M5-5. Best candidate and the two modes.**
+Last gate-passing candidate beats the last checked one, which beats the current unchecked one. Gated emits the last passing candidate even if the agent never submitted (T5.9). `submit` is accepted only when the current files are exactly the ones that last passed the gate.
+
+**D-M5-6. Repeats and tool errors count consecutive events.**
+Identical action (tool plus arguments) three times in a row: the nudge is appended to the third result, and a fourth identical action ends the run as `BUDGET_EXHAUSTED(repeated_action)`. Tool errors reset on any successful tool call. Rows record the stop as `STATE(kind)`, e.g. `BUDGET_EXHAUSTED(steps)`.
+
+**D-M5-7. Trimming is recomputed from the full history on every call and goes only as far as needed.**
+Each prompt is rebuilt from all turns (outputs already cut to 3K tokens on entry), then steps 2 to 4 are applied in order until the estimate fits. Nothing is deleted from memory, so a later bigger cap would show more. If even the pinned items do not fit, the middle of the candidate diff and verdict is cut as a last resort. Every call that needed trimming gets a `trim` trace event with counts per step.
+
+**D-M5-8. Active time excludes rate-limit waits and model response time; tool time counts.**
+Active time = elapsed - router waits - sum of `latency_s` of the replies. Sandbox and gate runs count as active, because they are the agent's own work. The hard cap uses elapsed time.
+
+**D-M5-9. Live fixture run: A-chain, 20 steps, keys redacted before commit.**
+`live-smoke.yml` with `mode: fixtures` runs `eval/configs/fixtures-a-chain.yaml` (chain policy, dev only) on all 8 fixtures with `llm: record`, limited to 20 steps per fixture to keep the job under 3 hours. It commits the cassettes, the report, the rows and the traces under `eval/reports/live/`, after `repro llm redact` (new command) runs over every file it commits. A failover shows up in the trace whenever the serving route changes between two replies. The replay test skips until those files exist.
+
