@@ -154,7 +154,9 @@ def test_config_hash_changes_with_every_field() -> None:
         "logical_model": "other", "policy": "chain", "llm": "cassette", "cassette_dir": "d",
         "k": 3, "temperature": 0.1, "max_output_tokens": 10, "prompt_cap": 10,
         "per_bug_tokens": 10, "max_requests": 1, "run_tokens": 10, "gate_timeout_s": 1.0,
-        "max_deferrals": 9, "notes": "n",
+        "max_deferrals": 9, "notes": "n", "cassette_match": "order", "max_steps": 3,
+        "max_gate_checks": 2, "active_minutes": 1.0, "hard_cap_minutes": 2.0,
+        "max_tool_errors": 1, "max_repeats": 1, "prompt_version": "v2",
     }
     assert set(changed) == set(EvalConfig.model_fields)
     hashes = {base.hash}

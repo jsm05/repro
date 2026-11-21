@@ -32,6 +32,12 @@ EXPECTED = {
         "fixture__f03_wrong_reason_trap": (O.WRONG_TEST, O.NO_TEST),
         "fixture__f06_two_modules": (O.REPRODUCED, O.REPRODUCED),
     },
+    "fixtures-a": {
+        "fixture__f01_off_by_one": (O.REPRODUCED, O.REPRODUCED),
+        "fixture__f02_raises": (O.REPRODUCED, O.REPRODUCED),
+        "fixture__f03_wrong_reason_trap": (O.WRONG_TEST, O.NO_TEST),
+        "fixture__f06_two_modules": (O.REPRODUCED, O.REPRODUCED),
+    },
 }
 
 
@@ -54,14 +60,18 @@ def test_golden_fixture_report(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
     b1 = {r.instance_id: r for r in rows if r.config_id == "fixtures-b1"}
     assert b1["fixture__f01_off_by_one"].gate_rejections == {"G2": 1}
     assert b1["fixture__f01_off_by_one"].requests == 5
+    agent = {r.instance_id: r for r in rows if r.config_id == "fixtures-a"}
+    assert agent["fixture__f01_off_by_one"].stop_reason == "SUBMITTED"
+    assert agent["fixture__f03_wrong_reason_trap"].stop_reason.startswith("ABSTAINED")
 
     text, plots = build_report(rows, TITLE)
     assert text == (ROOT / "eval/reports/fixtures.md").read_text()
     assert plots["token_ceiling.svg"] == (ROOT / "eval/reports/plots/token_ceiling.svg").read_text()
 
     out = tmp_path / "report" / "report.md"
-    res = cli.invoke(main, ["report", "--run", "fixtures-b0", "--run", "fixtures-b1",
-                            "--results-dir", str(results), "--title", TITLE, "--out", str(out)])
+    res = cli.invoke(main, ["report", "--run", "fixtures-b0", "--run", "fixtures-b1", "--run",
+                            "fixtures-a", "--results-dir", str(results), "--title", TITLE,
+                            "--out", str(out)])
     assert res.exit_code == 0, res.output
     assert out.read_text() == text
     assert (out.parent / "plots" / "token_ceiling.svg").exists()
