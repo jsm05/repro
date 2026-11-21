@@ -1,0 +1,100 @@
+[
+ {
+  "agree": true,
+  "disk_free_gb": 115.7,
+  "instance_id": "django__django-15127",
+  "official": "unresolved",
+  "ours": "WRONG_TEST",
+  "ours_reason": "unparseable candidate diff: diff ends in the middle of a hunk",
+  "seconds": 2348,
+  "transitions": {}
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 115.6,
+  "instance_id": "django__django-16662",
+  "official": "unresolved",
+  "ours": "WRONG_TEST",
+  "ours_reason": "unparseable candidate diff: diff ends in the middle of a hunk",
+  "seconds": 2828,
+  "transitions": {}
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 115.6,
+  "instance_id": "django__django-16938",
+  "official": "unresolved",
+  "ours": "WRONG_TEST",
+  "ours_reason": "unparseable candidate diff: diff ends in the middle of a hunk",
+  "seconds": 327,
+  "transitions": {}
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 116.4,
+  "error": "DiffParseError: diff ends in the middle of a hunk",
+  "instance_id": "sympy__sympy-13647",
+  "official": "not run",
+  "ours": "ERROR",
+  "seconds": 0
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 116.4,
+  "error": "DiffParseError: diff ends in the middle of a hunk",
+  "instance_id": "sympy__sympy-23262",
+  "official": "not run",
+  "ours": "ERROR",
+  "seconds": 0
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 105.9,
+  "instance_id": "matplotlib__matplotlib-24570",
+  "official": "unresolved",
+  "ours": "WRONG_TEST",
+  "ours_reason": "unparseable candidate diff: diff ends in the middle of a hunk",
+  "seconds": 2471,
+  "transitions": {}
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 111.2,
+  "instance_id": "scikit-learn__scikit-learn-10844",
+  "official": "no result (exit 0)",
+  "ours": "WRONG_TEST",
+  "ours_reason": "unparseable candidate diff: diff ends in the middle of a hunk",
+  "seconds": 1568,
+  "transitions": {}
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.5,
+  "instance_id": "pytest-dev__pytest-10051",
+  "official": "unresolved",
+  "ours": "WRONG_TEST",
+  "ours_reason": "unparseable candidate diff: diff ends in the middle of a hunk",
+  "seconds": 368,
+  "transitions": {}
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 108.9,
+  "instance_id": "pydata__xarray-3677",
+  "official": "unresolved",
+  "ours": "WRONG_TEST",
+  "ours_reason": "unparseable candidate diff: diff ends in the middle of a hunk",
+  "seconds": 2190,
+  "transitions": {}
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.4,
+  "instance_id": "psf__requests-6028",
+  "official": "unresolved",
+  "ours": "WRONG_TEST",
+  "ours_reason": "unparseable candidate diff: diff ends in the middle of a hunk",
+  "seconds": 524,
+  "transitions": {}
+ }
+]
