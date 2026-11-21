@@ -1,0 +1,11 @@
+# B0 on the 8 fixtures, replaying recorded responses (no network). Used by the golden
+# end-to-end test and to generate eval/reports/fixtures.md.
+config_id: fixtures-b0
+kind: B0
+dataset: fixtures
+logical_model: fake-recorded
+policy: pinned
+llm: cassette
+cassette_dir: eval/cassettes/fixtures-b0
+max_output_tokens: 8000
+gate_timeout_s: 30.0

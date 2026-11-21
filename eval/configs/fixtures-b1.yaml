@@ -1,0 +1,18 @@
+# B1 (5 samples, first to pass the online gate) on 4 fixtures, replaying recorded
+# responses. Paired with fixtures-b0 on those 4 in the fixture report.
+config_id: fixtures-b1
+kind: B1
+dataset: fixtures
+instances:
+  - fixture__f01_off_by_one
+  - fixture__f02_raises
+  - fixture__f03_wrong_reason_trap
+  - fixture__f06_two_modules
+logical_model: fake-recorded
+policy: pinned
+llm: cassette
+cassette_dir: eval/cassettes/fixtures-b1
+k: 5
+temperature: 0.8
+max_output_tokens: 8000
+gate_timeout_s: 30.0
