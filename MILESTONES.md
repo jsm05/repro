@@ -207,8 +207,8 @@ If this session runs long, B1 moves to M4. Nothing else moves.
 - [x] Quota state survives a restart and resets at the right boundary per provider (T3.20)
 - [x] B0 and B1 produce candidates on fixtures with `FakeLLM`, and those go through gate and oracle
 - [x] Record-then-replay through `CassetteLLM` gives byte-identical results
-- [ ] `live-smoke.yml` run green in Actions: every enabled route answered, and the ledger's token counts match what each provider reported (T3.L1)
-- [ ] `soak.yml` run for one night: no hidden daily cap on the primary, or the plan adjusted and recorded (T3.L2)
+- [x] `live-smoke.yml` run green in Actions: every enabled route answered, and the ledger's token counts match what each provider reported (T3.L1)
+- [x] `soak.yml` run for one night: no hidden daily cap on the primary, or the plan adjusted and recorded (T3.L2)
 
 **Explain it:** Why check the budget before the call instead of after? Why may the eval never fail over to a different model? How does the router tell a per-minute limit from a daily quota, and why does it matter? Why a text action protocol instead of native tool calls?
 
