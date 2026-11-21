@@ -25,6 +25,8 @@ class LLMResponse(BaseModel):
     # "reasoning" when the provider left `content` empty and the reply was taken from its
     # separate reasoning field (D-M5-11).
     text_source: str = "content"
+    # When content was empty: the provider's raw message, for diagnosis (truncated).
+    raw_note: str = ""
 
     @property
     def total_tokens(self) -> int:

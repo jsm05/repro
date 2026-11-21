@@ -7,6 +7,7 @@ provider-specific classes.
 
 from __future__ import annotations
 
+import json
 import os
 import time
 from collections.abc import Mapping, Sequence
@@ -18,6 +19,22 @@ from repro.llm.errors import ErrorClass, LLMError, classify, retry_after_seconds
 from repro.llm.registry import Registry, Route
 from repro.llm.secrets import read_key, redact
 from repro.llm.types import LLMResponse, Message
+
+
+def action_from_tool_call(call: Any) -> str:
+    """Turn a native tool call back into our text action."""
+    fn = getattr(call, "function", None)
+    name = str(getattr(fn, "name", "") or "")
+    raw = getattr(fn, "arguments", "") or ""
+    try:
+        args = json.loads(raw) if isinstance(raw, str) else dict(raw)
+    except (ValueError, TypeError):
+        args = {"raw": str(raw)}
+    if isinstance(args, dict) and "tool" in args:
+        obj = {"tool": args["tool"], "args": args.get("args", {})}
+    else:
+        obj = {"tool": name, "args": args if isinstance(args, dict) else {"value": args}}
+    return "```action\n" + json.dumps(obj) + "\n```"
 
 
 def reasoning_text(message: Any) -> str:
@@ -122,12 +139,18 @@ class OpenAICompatClient:
         choice = resp.choices[0] if resp.choices else None
         text = (choice.message.content or "") if choice is not None else ""
         source = "content"
+        raw_note = ""
         if choice is not None and not text.strip():
-            # Some providers' reasoning parsers put the whole reply in a separate field and
-            # leave content empty (seen on NVIDIA's Mistral Large 4, D-M5-11). A finished
-            # reply there is still the model's answer.
-            reasoning = reasoning_text(choice.message)
-            if reasoning.strip() and str(choice.finish_reason or "") == "stop":
+            msg = choice.message
+            raw_note = json.dumps(msg.model_dump(exclude_none=True), default=str)[:2000]
+            calls = getattr(msg, "tool_calls", None) or []
+            reasoning = reasoning_text(msg)
+            if calls:
+                # The provider's tool-call parser took the reply out of content (D-M5-12).
+                text, source = action_from_tool_call(calls[0]), "tool_call"
+            elif reasoning.strip() and str(choice.finish_reason or "") == "stop":
+                # Some providers' reasoning parsers put the whole reply in a separate field
+                # (seen on NVIDIA's Mistral Large 4, D-M5-11).
                 text, source = reasoning, "reasoning"
         usage = resp.usage
         details = getattr(usage, "completion_tokens_details", None) if usage else None
@@ -141,6 +164,7 @@ class OpenAICompatClient:
             model=self.route.model,
             latency_s=latency,
             text_source=source,
+            raw_note=raw_note,
         )
         if choice is None or not text.strip():
             raise LLMError(

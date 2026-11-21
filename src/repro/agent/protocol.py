@@ -15,7 +15,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-_BLOCK = re.compile(r"```action[ \t]*\r?\n(.*?)```", re.DOTALL)
+# The closing fence is optional: some providers drop it at the end of a reply (D-M5-12).
+_BLOCK = re.compile(r"```action[ \t]*\r?\n(.*?)(?:```|\Z)", re.DOTALL)
 
 REPAIR = (
     "Your last reply had no valid action. Reply with exactly one fenced block:\n\n"
@@ -43,8 +44,26 @@ class Action:
         return json.dumps({"tool": self.tool, "args": self.args}, sort_keys=True)
 
 
+def _bare_json(text: str) -> list[str]:
+    """JSON objects with a "tool" key written without the fence (D-M5-12)."""
+    dec = json.JSONDecoder()
+    found, i = [], text.find("{")
+    while i != -1:
+        try:
+            obj, end = dec.raw_decode(text, i)
+        except json.JSONDecodeError:
+            i = text.find("{", i + 1)
+            continue
+        if isinstance(obj, dict) and "tool" in obj:
+            found.append(text[i:end])
+        i = text.find("{", end)
+    return found
+
+
 def parse_action(text: str) -> Action:
     blocks = _BLOCK.findall(text or "")
+    if not blocks:
+        blocks = _bare_json(text or "")
     if not blocks:
         raise ParseError("no ```action block found")
     if len(blocks) > 1:
