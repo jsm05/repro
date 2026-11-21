@@ -103,7 +103,7 @@ class TestCmdSpec(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    framework: Literal["pytest"] = "pytest"
+    framework: Literal["pytest", "django", "sympy"] = "pytest"
     test_dirs: list[str] = Field(default_factory=lambda: ["tests"])
 
 

@@ -68,6 +68,12 @@ def run_tests(
     """
     if not test_ids:
         raise ValueError("no tests requested")
+    harness = getattr(sandbox, "harness", None)
+    if harness is not None and harness.framework != "pytest":
+        from repro.runner.harness_runner import run_harness_tests
+
+        return run_harness_tests(sandbox, harness, list(test_ids), timeout_s=timeout_s,
+                                 hash_seed=hash_seed, trace=trace)
     workdir = sandbox.workdir
     sandbox.put_file(f"{SCRATCH_DIR}/{PLUGIN_MODULE}.py", plugin_source())
     report_rel = f"{SCRATCH_DIR}/report-{uuid.uuid4().hex}.jsonl"

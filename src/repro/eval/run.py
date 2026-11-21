@@ -145,6 +145,7 @@ class Runner:
         clock: Clock | None = None,
         quota_ok: Callable[[], bool] = lambda: True,
         on_unit_done: Callable[[], None] | None = None,
+        on_stop: Callable[[], None] | None = None,
     ):
         self.config = config
         self.run_id = run_id
@@ -155,6 +156,7 @@ class Runner:
         self.clock = clock or RealClock()
         self.quota_ok = quota_ok
         self.on_unit_done = on_unit_done
+        self.on_stop = on_stop  # cleanup when the batch ends for any reason (e.g. reaper)
         self._stop_at: float | None = None
         self.durations: list[float] = []
 
@@ -239,6 +241,11 @@ class Runner:
         try:
             return self._batch()
         finally:
+            if self.on_stop is not None:
+                try:
+                    self.on_stop()
+                except Exception:  # cleanup must never hide the real outcome
+                    log.exception("on_stop cleanup failed")
             for signum, handler in old_handlers.items():
                 signal.signal(signum, handler)
             lock.release()

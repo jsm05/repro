@@ -66,5 +66,7 @@ known-first-party = ["repro", "tests"]
 strict = true
 python_version = "3.11"
 plugins = ["pydantic.mypy"]
-# repro_plugin.py runs inside old containers under pytest; it is untyped Python 3.6 code.
-exclude = ["tests/fixtures/", "src/repro/runner/repro_plugin.py"]
+# repro_plugin.py and repro_trace.py run inside old containers (Python 3.5+), untyped.
+# _swt_driver.py runs inside the SWT-bench checkout, importing its `src` package.
+exclude = ["tests/fixtures/", "src/repro/runner/repro_plugin.py",
+           "src/repro/runner/repro_trace.py", "src/repro/datasets/_swt_driver.py"]

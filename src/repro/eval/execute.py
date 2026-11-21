@@ -7,6 +7,7 @@ a small interface: fixtures now, SWT-bench in M6.
 from __future__ import annotations
 
 import json
+import logging
 import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
@@ -29,6 +30,8 @@ from repro.llm.types import LLM, LLMResponse, Message
 from repro.models import Candidate, Instance, InstanceOutcome
 from repro.oracle.oracle import run_oracle
 from repro.sandbox.local import local_factory
+
+log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -125,6 +128,13 @@ LLMFactory = Callable[[str], LLMHandle]
 def eval_estimator() -> TokenEstimator:
     """Fixed chars/3 counting, so prompts (and cassette keys) match on every machine."""
     return TokenEstimator(counter=chars_counter)
+
+
+@dataclass
+class _Unit:
+    row: ResultRow
+    files: dict[str, str]
+    trace: TraceRecorder
 
 
 @dataclass
@@ -257,6 +267,25 @@ class Executor:
     # -- one unit ---------------------------------------------------------------------
 
     def execute(self, instance_id: str) -> UnitOutput:
+        release = getattr(self.dataset, "release", None)
+        released = False
+        try:
+            out = self._execute(instance_id)
+            if release is not None:
+                # Remove this instance's images and prune (T6.11); log the free disk.
+                free = release(instance_id)
+                released = True
+                out.trace.add("disk", {"free_gb": round(float(free), 1)})
+            return UnitOutput(out.row, {**out.files, f"traces/{instance_id}.jsonl":
+                                        out.trace.jsonl()})
+        finally:
+            if release is not None and not released:
+                try:
+                    release(instance_id)
+                except Exception:
+                    log.exception("cleanup after %s failed", instance_id)
+
+    def _execute(self, instance_id: str) -> _Unit:
         cfg = self.config
         t_start = time.monotonic()
         loaded = self.dataset.load(instance_id)
@@ -317,12 +346,12 @@ class Executor:
             wall_clock_s=round(time.monotonic() - t_start, 3),
             infra_error=verdict.reason if outcome is InstanceOutcome.INFRA_ERROR else "",
         )
-        files = {f"traces/{instance_id}.jsonl": trace.jsonl()}
+        files: dict[str, str] = {}
         if cand is not None:
             files[f"candidates/{instance_id}.diff"] = cand.diff
             files[f"candidates/{instance_id}.json"] = json.dumps(
                 {"test_ids": cand.test_ids, "origin": cand.origin}, sort_keys=True) + "\n"
-        return UnitOutput(row, files)
+        return _Unit(row, files, trace)
 
 
 BaselineExecutor = Executor  # name used before the agent existed

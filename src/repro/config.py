@@ -23,6 +23,8 @@ class EvalConfig(BaseModel):
     dataset: Literal["fixtures", "swtbench"] = "fixtures"
     # Instance ids to run, in order. None means every instance the dataset has.
     instances: list[str] | None = None
+    # Or a file with one instance id per line (e.g. eval/samples/pilot_10.txt).
+    instances_file: str | None = None
     logical_model: str = "primary"
     policy: Literal["pinned", "chain"] = "pinned"
     # live: real routes through the router. cassette: replay recorded responses only.
@@ -58,6 +60,14 @@ class EvalConfig(BaseModel):
     @classmethod
     def from_yaml(cls, path: str | Path) -> EvalConfig:
         return cls.model_validate(yaml.safe_load(Path(path).read_text()))
+
+    def instance_ids(self) -> list[str] | None:
+        if self.instances is not None:
+            return list(self.instances)
+        if self.instances_file is not None:
+            lines = Path(self.instances_file).read_text().splitlines()
+            return [x.strip() for x in lines if x.strip() and not x.startswith("#")]
+        return None
 
     def to_yaml(self) -> str:
         return yaml.safe_dump(self.model_dump(mode="json"), sort_keys=True)

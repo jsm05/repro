@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import click
 
@@ -306,12 +307,21 @@ def _deadline_at(deadline: str | None, minutes: float | None) -> float | None:
     return at.timestamp()
 
 
-def _dataset(cfg_dataset: str, fixtures_root: Path):  # type: ignore[no-untyped-def]
+DEFAULT_SWT_RECORDS = Path("eval/data/swt_records.jsonl")
+
+
+def _dataset(cfg_dataset: str, fixtures_root: Path, swt_records: Path = DEFAULT_SWT_RECORDS,
+             run_id: str = "adhoc") -> Any:
     from repro.eval.execute import FixtureDataset
 
-    if cfg_dataset != "fixtures":
-        raise click.UsageError(f"dataset {cfg_dataset!r} arrives in M6; only fixtures for now")
-    return FixtureDataset(str(fixtures_root))
+    if cfg_dataset == "fixtures":
+        return FixtureDataset(str(fixtures_root))
+    from repro.datasets.swtbench import SWTBenchDataset
+
+    if not swt_records.exists():
+        raise click.UsageError(f"SWT-bench records not found at {swt_records}; export them "
+                               "with scripts/export_instances.py (needs network)")
+    return SWTBenchDataset(swt_records, run_id)
 
 
 @main.command("eval")
@@ -328,6 +338,8 @@ def _dataset(cfg_dataset: str, fixtures_root: Path):  # type: ignore[no-untyped-
               default=DEFAULT_FIXTURES, show_default=True)
 @click.option("--routes", "routes_path", type=click.Path(path_type=Path),
               default=Path("config/routes.yaml"), show_default=True)
+@click.option("--swt-records", type=click.Path(path_type=Path), default=DEFAULT_SWT_RECORDS,
+              show_default=True, help="SWT-bench dataset rows (JSONL) for dataset: swtbench.")
 @click.option("--max-units", type=int, default=None, help="Stop after N units.")
 @click.option("--deadline", default=None, help="HH:MM UTC; no unit starts that would end later.")
 @click.option("--deadline-minutes", type=float, default=None,
@@ -336,7 +348,8 @@ def _dataset(cfg_dataset: str, fixtures_root: Path):  # type: ignore[no-untyped-
 @click.option("--stop-when-exhausted", is_flag=True,
               help="Exit cleanly when no route of the logical model has quota left.")
 def eval_cmd(config_path: Path, run_id: str, results_dir: Path, remote: str | None,
-             workdir: Path, fixtures_root: Path, routes_path: Path, max_units: int | None,
+             workdir: Path, fixtures_root: Path, routes_path: Path, swt_records: Path,
+             max_units: int | None,
              deadline: str | None, deadline_minutes: float | None, shard_text: str,
              stop_when_exhausted: bool) -> None:
     """Run a benchmark config in resumable batches."""
@@ -351,8 +364,8 @@ def eval_cmd(config_path: Path, run_id: str, results_dir: Path, remote: str | No
 
     cfg = EvalConfig.from_yaml(config_path)
     shard, shards = parse_shard(shard_text)
-    dataset = _dataset(cfg.dataset, fixtures_root)
-    ids = cfg.instances if cfg.instances is not None else dataset.ids()
+    dataset = _dataset(cfg.dataset, fixtures_root, swt_records, run_id)
+    ids = cfg.instance_ids() or dataset.ids()
     store: ResultsStore = (GitStore(remote, run_id, workdir) if remote
                            else LocalStore(results_dir, run_id))
     verified = ""
@@ -383,9 +396,17 @@ def eval_cmd(config_path: Path, run_id: str, results_dir: Path, remote: str | No
     options = BatchOptions(shard=shard, shards=shards, max_units=max_units,
                            deadline_at=_deadline_at(deadline, deadline_minutes),
                            stop_when_exhausted=stop_when_exhausted)
+    on_stop = None
+    if cfg.dataset == "swtbench":
+        from repro.sandbox.docker import reap
+
+        reap(run_id)  # leftovers from a crashed batch
+
+        def on_stop() -> None:
+            reap(run_id)
     try:
         summary = Runner(cfg, run_id, ids, store, executor, options=options,
-                         quota_ok=quota_ok).run()
+                         quota_ok=quota_ok, on_stop=on_stop).run()
     except (LockHeld, ConfigMismatch) as exc:
         click.echo(f"error: {exc}", err=True)
         raise SystemExit(2) from exc
@@ -402,8 +423,7 @@ def _run_ids(run_dir: Path, fixtures_root: Path) -> list[str]:
     if not frozen.exists():
         raise click.UsageError(f"{run_dir} has no config.yaml; is the run id right?")
     cfg = EvalConfig.from_yaml(frozen)
-    return cfg.instances if cfg.instances is not None else _dataset(cfg.dataset,
-                                                                    fixtures_root).ids()
+    return cfg.instance_ids() or _dataset(cfg.dataset, fixtures_root).ids()
 
 
 @main.command("status")
