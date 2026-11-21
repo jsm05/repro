@@ -1,0 +1,124 @@
+name: official-score
+
+# Manual. Scores a finished run's predictions with the official SWT-bench harness, one
+# matrix job per instance, and commits official_report.json next to the run's rows on
+# the `results` branch. No API keys: the harness only runs tests.
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Run id on the results branch"
+        required: true
+      max_parallel:
+        description: "Matrix jobs at once"
+        default: "6"
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: official-score-${{ inputs.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      ids: ${{ steps.ids.outputs.ids }}
+    env:
+      RUN_ID: ${{ inputs.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: pip install -e .
+      - name: Fetch the run from the results branch
+        run: |
+          git fetch -q origin results
+          mkdir -p /tmp/results
+          git archive origin/results "results/$RUN_ID" | tar -x -C /tmp/results
+      - name: Export predictions
+        run: repro export --run "$RUN_ID" --results-dir /tmp/results/results
+      - name: Instance list
+        id: ids
+        run: |
+          python -c "import json,sys; ids=[json.loads(l)['instance_id'] for l in open(sys.argv[1]) if l.strip()]; print('ids=' + json.dumps(ids))" "/tmp/results/results/$RUN_ID/predictions.jsonl" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: predictions
+          path: /tmp/results/results/${{ inputs.run_id }}/predictions.jsonl
+
+  score:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJson(inputs.max_parallel) }}
+      matrix:
+        instance: ${{ fromJson(needs.plan.outputs.ids) }}
+    env:
+      RUN_ID: ${{ inputs.run_id }}
+      INSTANCE: ${{ matrix.instance }}
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          docker image prune --all --force
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install the SWT-bench harness
+        run: |
+          git clone -q https://github.com/logic-star-ai/swt-bench.git /tmp/swt-bench
+          git -C /tmp/swt-bench checkout -q be12d4c8e7a5315a6bd60b0cad72736e96a4af3e
+          pip install -e /tmp/swt-bench
+      - uses: actions/download-artifact@v4
+        with:
+          name: predictions
+          path: /tmp/preds
+      - name: Score one instance
+        working-directory: /tmp/swt-bench
+        run: |
+          python -m src.main --dataset_name nmuendler/SWT-Bench_Verified_bm25_27k_zsp \
+            --is_swt true --predictions_path /tmp/preds/predictions.jsonl --max_workers 1 \
+            --instance_ids "$INSTANCE" --run_id "$RUN_ID-official"
+      - name: Upload the harness output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: official-${{ matrix.instance }}
+          path: |
+            /tmp/swt-bench/evaluation_results/
+            /tmp/swt-bench/*.json
+          if-no-files-found: warn
+
+  collect:
+    needs: [plan, score]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      RUN_ID: ${{ inputs.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: /tmp/artifacts
+      - name: Merge and commit to the results branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          python scripts/merge_official.py /tmp/artifacts /tmp/artifacts/predictions/predictions.jsonl /tmp/official_report.json
+          git fetch -q origin results
+          git checkout -q -B results origin/results
+          mkdir -p "results/$RUN_ID"
+          cp /tmp/official_report.json "results/$RUN_ID/official_report.json"
+          git add "results/$RUN_ID/official_report.json"
+          git commit -qm "official score for $RUN_ID (run ${{ github.run_id }})" || exit 0
+          git push origin results

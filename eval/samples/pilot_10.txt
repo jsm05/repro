@@ -1,0 +1,10 @@
+django__django-15127
+django__django-16662
+django__django-16938
+sympy__sympy-13647
+sympy__sympy-23262
+matplotlib__matplotlib-24570
+scikit-learn__scikit-learn-10844
+pytest-dev__pytest-10051
+pydata__xarray-3677
+psf__requests-6028

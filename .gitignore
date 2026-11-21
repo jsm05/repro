@@ -11,3 +11,4 @@ runs/
 .hypothesis/
 .repro/
 /results/
+eval/data/

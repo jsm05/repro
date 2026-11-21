@@ -28,10 +28,6 @@ jobs:
     if: inputs.mode == 'smoke'
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    env:
-      NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -40,9 +36,17 @@ jobs:
       - name: Install
         run: pip install -e ".[dev]"
       - name: Live tests
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: pytest -m live_llm tests/live/test_live.py::test_live_smoke
       - name: Smoke report
         if: always()
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: repro llm smoke --out eval/live-smoke.md || true
       - name: Commit report
         if: always()
@@ -62,10 +66,6 @@ jobs:
     if: inputs.mode == 'fixtures'
     runs-on: ubuntu-latest
     timeout-minutes: 180
-    env:
-      NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -74,9 +74,17 @@ jobs:
       - name: Install
         run: pip install -e ".[dev]"
       - name: Smoke and agent-prompt probe
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: repro llm smoke --out eval/live-smoke.md || true
       - name: Agent on the fixtures (records cassettes)
         timeout-minutes: 160
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: >
           repro eval --config eval/configs/fixtures-a-chain.yaml
           --run-id fixtures-a-chain-live --results-dir runs/live
@@ -91,6 +99,10 @@ jobs:
           cp -r runs/live/fixtures-a-chain-live/traces eval/reports/live/traces || true
       - name: Redact keys
         if: always()
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: repro llm redact eval/live-smoke.md eval/cassettes/fixtures-a-chain eval/reports/live
       - name: Commit cassettes and report
         if: always()

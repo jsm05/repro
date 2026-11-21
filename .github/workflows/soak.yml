@@ -32,9 +32,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 355
     env:
-      NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       ROUTE: ${{ inputs.route }}
       REQUESTS: ${{ inputs.requests }}
       HOURS: ${{ inputs.hours }}
@@ -48,6 +45,10 @@ jobs:
       - name: Soak
         # Below the job limit so the commit step always gets time to run.
         timeout-minutes: 330
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: repro llm soak --route "$ROUTE" --requests "$REQUESTS" --hours "$HOURS" --out eval/soak.md
       - name: Commit report
         if: always()
