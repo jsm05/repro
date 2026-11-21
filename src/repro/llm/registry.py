@@ -57,6 +57,9 @@ class Route(BaseModel):
     stop_sequences: bool = True
     reasoning: bool = False
     reasoning_effort: str | None = None
+    # Send the agent's tool schemas natively. Needed where the server's tool-call parser
+    # swallows replies the model writes as tool calls (NVIDIA Mistral Large 4, D-M5-13).
+    native_tools: bool = False
     limits: RouteLimits
     reset: Literal["utc_day", "pacific_day"] = "utc_day"
     free: bool = False

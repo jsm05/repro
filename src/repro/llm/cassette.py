@@ -15,7 +15,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections import defaultdict
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any, Literal
 
@@ -69,6 +69,7 @@ class CassetteLLM:
         max_tokens: int,
         temperature: float = 0.0,
         stop: Sequence[str] | None = None,
+        tools: Sequence[Mapping[str, Any]] | None = None,
     ) -> LLMResponse:
         key = request_key(messages, max_tokens, temperature, stop)
         if self.mode == "replay" and self.match == "order":
@@ -90,7 +91,7 @@ class CassetteLLM:
             return LLMResponse.model_validate(responses[i])
         assert self.inner is not None
         resp = self.inner.complete(messages, max_tokens=max_tokens, temperature=temperature,
-                                   stop=stop)
+                                   stop=stop, tools=tools)
         record = {
             "key": key,
             "request": {"messages": [dict(m) for m in messages], "max_tokens": max_tokens,

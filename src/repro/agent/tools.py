@@ -32,6 +32,29 @@ NO_NETWORK_ENV = {
 TOOLS = ("bash", "view", "write_test", "check", "submit", "abstain")
 
 
+def _fn(name: str, desc: str, props: dict[str, Any], required: list[str]) -> dict[str, Any]:
+    return {"type": "function", "function": {
+        "name": name, "description": desc,
+        "parameters": {"type": "object", "properties": props, "required": required}}}
+
+
+# Native schemas for routes that need them (Route.native_tools). The replies come back as
+# tool calls and are turned into the same text actions, so the loop is unchanged.
+TOOL_SCHEMAS: list[dict[str, Any]] = [
+    _fn("bash", "Run a shell command in the repo root.", {"cmd": {"type": "string"}}, ["cmd"]),
+    _fn("view", "Show lines start..end of a file (1-based).",
+        {"path": {"type": "string"}, "start": {"type": "integer"}, "end": {"type": "integer"}},
+        ["path"]),
+    _fn("write_test", "Create a test file, or append to an existing one.",
+        {"path": {"type": "string"}, "content": {"type": "string"},
+         "mode": {"type": "string", "enum": ["new", "append"]}}, ["path", "content"]),
+    _fn("check", "Run the verification gate on your test files.",
+        {"test_ids": {"type": "array", "items": {"type": "string"}}}, []),
+    _fn("submit", "Finish; allowed only after check passed on the current files.", {}, []),
+    _fn("abstain", "Give up with a reason.", {"reason": {"type": "string"}}, ["reason"]),
+]
+
+
 class ToolError(Exception):
     """A bad call: shown to the model as an error, counted toward the error limit."""
 

@@ -80,6 +80,7 @@ class OpenAICompatClient:
         max_tokens: int,
         temperature: float = 0.0,
         stop: Sequence[str] | None = None,
+        tools: Sequence[Mapping[str, Any]] | None = None,
     ) -> dict[str, Any]:
         r = self.route
         msgs = [{"role": m["role"], "content": m["content"]} for m in messages]
@@ -102,6 +103,9 @@ class OpenAICompatClient:
             req["stop"] = list(stop)
         if r.reasoning_effort:
             req["extra_body"] = {"reasoning_effort": r.reasoning_effort}
+        if tools and r.native_tools:
+            req["tools"] = [dict(t) for t in tools]
+            req["tool_choice"] = "auto"
         return req
 
     def complete(
@@ -111,9 +115,10 @@ class OpenAICompatClient:
         max_tokens: int,
         temperature: float = 0.0,
         stop: Sequence[str] | None = None,
+        tools: Sequence[Mapping[str, Any]] | None = None,
     ) -> LLMResponse:
         req = self.build_request(
-            messages, max_tokens=max_tokens, temperature=temperature, stop=stop
+            messages, max_tokens=max_tokens, temperature=temperature, stop=stop, tools=tools
         )
         start = time.monotonic()
         provider = self.route.provider

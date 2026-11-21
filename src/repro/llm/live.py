@@ -17,7 +17,7 @@ import os
 import statistics
 import time
 import urllib.request
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -91,21 +91,36 @@ def first_agent_prompt(fixtures_root: str | Path = "tests/fixtures/mini_repos",
         card.render(est), "", "").messages
 
 
+ProbeTarget = tuple[str, Route, str, str]  # (label, route, base_url, key)
+
+
 def agent_probe(route: Route, base_url: str, key: str, messages: list[dict[str, str]],
-                max_tokens: int = 8000, timeout_s: float = 300) -> list[ProbeResult]:
-    """Send the agent's first prompt three ways and record what comes back (M5 diagnosis
-    of empty replies): as is, with the system prompt merged into the user turn, and with
-    reasoning_effort=low."""
-    variants = [
-        ("system role", route),
-        ("system merged into user", route.model_copy(update={"system_role": False})),
-        ("reasoning_effort=low", route.model_copy(update={"reasoning_effort": "low"})),
+                max_tokens: int = 8000, timeout_s: float = 300,
+                tools: list[dict[str, Any]] | None = None,
+                others: Sequence[ProbeTarget] = ()) -> list[ProbeResult]:
+    """Send the agent's first prompt several ways and record what comes back (M5 diagnosis
+    of empty replies): as is, with the system prompt merged into the user turn, with
+    reasoning_effort=low, with native tool schemas, and as is on other routes."""
+    targets: list[tuple[str, Route, str, str, list[dict[str, Any]] | None]] = [
+        ("system role", route.model_copy(update={"native_tools": False}), base_url, key, None),
+        ("system merged into user",
+         route.model_copy(update={"system_role": False, "native_tools": False}), base_url, key,
+         None),
+        ("reasoning_effort=low",
+         route.model_copy(update={"reasoning_effort": "low", "native_tools": False}), base_url,
+         key, None),
     ]
+    if tools:
+        targets.append(("native tools", route.model_copy(update={"native_tools": True}),
+                        base_url, key, tools))
+    for label, r, url, k in others:
+        targets.append((label, r, url, k, tools if r.native_tools else None))
     out = []
-    for name, r in variants:
-        client = OpenAICompatClient(r, base_url, key, timeout_s=timeout_s)
+    for name, r, url, k, t in targets:
+        client = OpenAICompatClient(r, url, k, timeout_s=timeout_s)
         try:
-            resp = client.complete(messages, max_tokens=min(max_tokens, r.max_output_tokens))
+            resp = client.complete(messages, max_tokens=min(max_tokens, r.max_output_tokens),
+                                   tools=t)
             where = {"reasoning": " (taken from the reasoning field)",
                      "tool_call": " (taken from a native tool call)"}.get(resp.text_source, "")
             if resp.raw_note:
@@ -116,10 +131,11 @@ def agent_probe(route: Route, base_url: str, key: str, messages: list[dict[str, 
                                     else "no action block") + where))
         except LLMError as exc:
             empty = exc.response if isinstance(exc.response, LLMResponse) else None
+            note = f"; raw: {empty.raw_note[:200]}" if empty and empty.raw_note else ""
             out.append(ProbeResult(name, False, empty.finish_reason if empty else "", 0,
                                    empty.completion_tokens if empty else 0,
                                    empty.reasoning_tokens if empty else 0,
-                                   empty.latency_s if empty else 0.0, str(exc)[:200]))
+                                   empty.latency_s if empty else 0.0, str(exc)[:200] + note))
     return out
 
 
@@ -199,8 +215,19 @@ def smoke(
         key = read_key(env, prov.api_key_env)
         if key:
             report.probe_route = route.id
+            from repro.agent.tools import TOOL_SCHEMAS
+
+            others: list[ProbeTarget] = []
+            for other in registry.routes.values():
+                if other.enabled and other.id != route.id and other.provider in ("nvidia",
+                                                                                 "gemini"):
+                    op = registry.provider(other)
+                    ok = read_key(env, op.api_key_env)
+                    if ok:
+                        others.append((other.id, other, op.base_url, ok))
             try:
-                report.probes = agent_probe(route, prov.base_url, key, first_agent_prompt())
+                report.probes = agent_probe(route, prov.base_url, key, first_agent_prompt(),
+                                            tools=TOOL_SCHEMAS, others=others)
             except Exception as exc:  # report, don't crash the smoke run
                 report.probes = [ProbeResult("all", False,
                                              detail=redact(f"{type(exc).__name__}: {exc}"[:200],
@@ -224,7 +251,8 @@ def smoke_markdown(report: SmokeReport, when: str) -> str:
         )
     if report.probes:
         lines += ["", f"## Agent-prompt probe ({report.probe_route}, max_tokens 8000)", "",
-                  "The agent's first prompt on fixture f01, sent three ways.", "",
+                  "The agent's first prompt on fixture f01, sent several ways and to the "
+                  "other routes.", "",
                   "| Variant | Content | finish_reason | Chars | Completion | Reasoning | "
                   "Latency s | Detail |", "|---|---|---|---|---|---|---|---|"]
         for pr in report.probes:

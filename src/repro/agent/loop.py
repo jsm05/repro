@@ -16,7 +16,7 @@ from typing import Literal
 from repro.agent.context import Card, Context
 from repro.agent.prompts import PROMPTS
 from repro.agent.protocol import NUDGE, Action, ParseError, parse_action, repair_message
-from repro.agent.tools import TOOLS, ToolError, ToolResult, Workspace
+from repro.agent.tools import TOOL_SCHEMAS, TOOLS, ToolError, ToolResult, Workspace
 from repro.eval.trace import TraceRecorder
 from repro.llm.budget import BudgetExceeded
 from repro.llm.clock import Clock
@@ -218,7 +218,7 @@ class AgentLoop:
                 return self._finish("BUDGET_EXHAUSTED", "tokens")
             try:
                 resp: LLMResponse = self.llm.complete(built.messages, max_tokens=lim.max_output,
-                                                      temperature=0.0)
+                                                      temperature=0.0, tools=TOOL_SCHEMAS)
             except Deferred as exc:
                 self.trace.add("deferred", {"reset_at": exc.reset_at})
                 return self._finish("DEFERRED", "quota")

@@ -24,6 +24,7 @@ routes:
     context_window: 131072   # not published for the free endpoint; 9K-token prompts measured fine
     max_output_tokens: 8192  # reasoning model: reasoning tokens count against this
     reasoning: true
+    native_tools: true       # the server's tool parser swallows tool-call replies otherwise (D-M5-13)
     limits: {rpm: 40}
     reset: utc_day
     free: true

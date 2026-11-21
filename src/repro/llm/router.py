@@ -22,9 +22,9 @@ from __future__ import annotations
 import logging
 import math
 import random
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Literal, Protocol
+from typing import Any, Literal, Protocol
 
 from repro.llm.budget import BudgetExceeded, Ledger, LedgerEntry, RunBudget, TokenBudget
 from repro.llm.clock import Clock
@@ -47,6 +47,7 @@ class ChatClient(Protocol):
         max_tokens: int,
         temperature: float = 0.0,
         stop: Sequence[str] | None = None,
+        tools: Sequence[Mapping[str, Any]] | None = None,
     ) -> LLMResponse: ...
 
 
@@ -199,6 +200,7 @@ class Router:
         temperature: float = 0.0,
         stop: Sequence[str] | None = None,
         budget: TokenBudget | None = None,
+        tools: Sequence[Mapping[str, Any]] | None = None,
     ) -> LLMResponse:
         routes = self.candidates(target, policy)
         if not routes:
@@ -232,7 +234,8 @@ class Router:
                     if math.isfinite(wait):
                         resets.append(self.clock.now() + wait)
                     continue
-                outcome = self._call_route(route, messages, max_tokens, temperature, stop)
+                outcome = self._call_route(route, messages, max_tokens, temperature, stop,
+                                            tools)
                 if outcome.response is not None:
                     resp = outcome.response
                     self.limiter.settle(reservation, resp.total_tokens)
@@ -258,6 +261,7 @@ class Router:
         max_tokens: int,
         temperature: float,
         stop: Sequence[str] | None,
+        tools: Sequence[Mapping[str, Any]] | None = None,
     ) -> _Outcome:
         cfg = self.config
         try:
@@ -275,7 +279,7 @@ class Router:
             try:
                 resp = client.complete(
                     msgs, max_tokens=min(max_tokens, route.max_output_tokens),
-                    temperature=temperature, stop=stop,
+                    temperature=temperature, stop=stop, tools=tools,
                 )
             except LLMError as exc:
                 cls = exc.cls
@@ -377,10 +381,11 @@ class RoutedLLM:
         max_tokens: int,
         temperature: float = 0.0,
         stop: Sequence[str] | None = None,
+        tools: Sequence[Mapping[str, Any]] | None = None,
     ) -> LLMResponse:
         return self.router.complete(
             self.target, messages, policy=self.policy, max_tokens=max_tokens,
-            temperature=temperature, stop=stop, budget=self.budget,
+            temperature=temperature, stop=stop, budget=self.budget, tools=tools,
         )
 
 

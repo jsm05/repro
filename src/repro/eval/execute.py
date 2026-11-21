@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import time
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -74,10 +74,15 @@ class MeteredLLM:
         self.responses: list[LLMResponse] = []
 
     def complete(self, messages: Sequence[Message], *, max_tokens: int,
-                 temperature: float = 0.0, stop: Sequence[str] | None = None) -> LLMResponse:
+                 temperature: float = 0.0, stop: Sequence[str] | None = None,
+                 tools: Sequence[Mapping[str, Any]] | None = None) -> LLMResponse:
         waited = self.wait_s()
-        resp = self.inner.complete(messages, max_tokens=max_tokens, temperature=temperature,
-                                   stop=stop)
+        if tools is None:
+            resp = self.inner.complete(messages, max_tokens=max_tokens,
+                                       temperature=temperature, stop=stop)
+        else:
+            resp = self.inner.complete(messages, max_tokens=max_tokens,
+                                       temperature=temperature, stop=stop, tools=tools)
         waited = self.wait_s() - waited
         self.responses.append(resp)
         self.trace.add("llm_call", {

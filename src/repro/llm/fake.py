@@ -7,7 +7,7 @@ import json
 import threading
 import time
 from collections import deque
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
@@ -142,6 +142,7 @@ class FakeLLM:
         max_tokens: int,
         temperature: float = 0.0,
         stop: Sequence[str] | None = None,
+        tools: Sequence[Mapping[str, Any]] | None = None,
     ) -> LLMResponse:
         self.calls.append([dict(m) for m in messages])
         if not self._script:

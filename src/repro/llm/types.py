@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Protocol
+from typing import Any, Protocol
 
 from pydantic import BaseModel, ConfigDict
 
@@ -41,4 +41,8 @@ class LLM(Protocol):
         max_tokens: int,
         temperature: float = 0.0,
         stop: Sequence[str] | None = None,
-    ) -> LLMResponse: ...
+        tools: Sequence[Mapping[str, Any]] | None = None,
+    ) -> LLMResponse:
+        """`tools`: optional native tool schemas; routes without native tool support
+        ignore them (the text action protocol still applies)."""
+        ...
