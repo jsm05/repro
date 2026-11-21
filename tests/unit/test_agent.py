@@ -504,3 +504,12 @@ def test_empty_reply_gets_a_repair_message(tmp_path: Path) -> None:
         prompts = h.prompts()
     assert res.state == "ABSTAINED" and res.tokens >= 8900
     assert "hit the output limit" in prompts[1]
+
+
+def test_empty_assistant_turn_is_never_sent_empty() -> None:
+    """D-M5-11: an empty reply goes back into history as a placeholder (providers 400 on "")."""
+    ctx = Context("sys", "issue", "repo", EST, cap=10**9)
+    ctx.add("", "harness", "repair please", "", harness=True)
+    msgs = ctx.build("CARD", "", "").messages
+    assert all(m["content"] for m in msgs)
+    assert {"role": "assistant", "content": "(empty reply)"} in msgs

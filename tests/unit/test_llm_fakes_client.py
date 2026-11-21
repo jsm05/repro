@@ -114,3 +114,21 @@ def test_empty_output_and_retry_after_header() -> None:
         assert exc.value.response is not None and exc.value.response.text == ""
         assert exc.value.response.prompt_tokens == 10  # usage kept for accounting
     assert retry_after_seconds({"Retry-After": "7"}, "") == 7.0
+
+
+def test_reply_in_reasoning_field_is_used_when_content_is_empty() -> None:
+    """D-M5-11: a finished reply that the provider put in its reasoning field is used."""
+    action = 'Look.\n```action\n{"tool": "bash", "args": {"cmd": "ls"}}\n```'
+    with FakeProvider() as fp:
+        r = ok(text="", completion_tokens=54, reasoning_tokens=53)
+        r.body["choices"][0]["message"]["reasoning_content"] = action
+        cut = ok(text="", completion_tokens=8000, reasoning_tokens=8000)
+        cut.body["choices"][0]["message"]["reasoning_content"] = "thinking..."
+        cut.body["choices"][0]["finish_reason"] = "length"
+        fp.push(r, cut)
+        client = OpenAICompatClient(_route(), fp.base_url, TEST_KEY)
+        resp = client.complete(MSGS, max_tokens=8000)
+        assert resp.text == action and resp.text_source == "reasoning"
+        with pytest.raises(LLMError) as exc:  # cut off mid-reasoning: still empty
+            client.complete(MSGS, max_tokens=8000)
+        assert exc.value.cls is ErrorClass.EMPTY_OUTPUT
