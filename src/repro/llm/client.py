@@ -30,6 +30,8 @@ def action_from_tool_call(call: Any) -> str:
         args = json.loads(raw) if isinstance(raw, str) else dict(raw)
     except (ValueError, TypeError):
         args = {"raw": str(raw)}
+    if isinstance(args, dict) and set(args) == {"args"} and isinstance(args["args"], dict):
+        args = args["args"]  # the model nested our text format inside the call
     if isinstance(args, dict) and "tool" in args:
         obj = {"tool": args["tool"], "args": args.get("args", {})}
     else:
