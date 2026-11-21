@@ -159,11 +159,13 @@ def test_t6_d9_api_keys_never_enter_a_container(tmp_path: Path,
                     reason="pilot records not exported (REPRO_PILOT_RECORDS)")
 def test_t6_d8_gold_agreement_on_pilot() -> None:
     """T6.D8: gold tests are F→P in our oracle on the pilot, and the official harness agrees."""
-    out = ROOT / "eval" / "gold-agreement.md"
+    only = os.environ.get("REPRO_PILOT_ONLY", "")
+    out = Path(os.environ.get("REPRO_GOLD_OUT", str(ROOT / "eval" / "gold-agreement.md")))
     # Output streams to the job log so progress is visible while it runs.
     res = subprocess.run([sys.executable, str(ROOT / "scripts" / "gold_agreement.py"),
                           str(ROOT / "eval" / "samples" / "pilot_10.txt"), "--records",
-                          os.environ["REPRO_PILOT_RECORDS"], "--out", str(out)],
+                          os.environ["REPRO_PILOT_RECORDS"], "--out", str(out),
+                          *(["--only", only] if only else [])],
                          cwd=ROOT, check=False)
     assert out.exists()
     assert res.returncode == 0, out.read_text()

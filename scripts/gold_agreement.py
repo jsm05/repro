@@ -7,6 +7,9 @@ instances. Writes a markdown table and a JSON file; exit 1 if any instance disag
 
     python scripts/gold_agreement.py eval/samples/pilot_10.txt \
         --records eval/data/swt_records.jsonl --out eval/gold-agreement.md
+
+In Actions each instance runs in its own matrix job (`--only ID`), and a last job merges
+the per-instance JSON files (`--merge DIR`) into the report.
 """
 
 from __future__ import annotations
@@ -48,7 +51,8 @@ def official(instance_id: str, run_id: str) -> str:
     proc = subprocess.run(
         [sys.executable, "-m", "src.main", "--dataset_name", DATASET, "--is_swt", "true",
          "--predictions_path", "gold", "--max_workers", "1", "--instance_ids", instance_id,
-         "--run_id", run_id, "--cache_level", "instance", "--clean", "false"],
+         "--run_id", run_id, "--cache_level", "instance", "--clean", "false",
+         "--compute_coverage", "false", "--timeout", "900"],
         cwd=root, capture_output=True, text=True, timeout=3600, check=False)
     candidates = [p for p in root.rglob("*.json") if run_id in str(p)]
     if not candidates and (root / "evaluation_results").is_dir():
@@ -60,7 +64,8 @@ def official(instance_id: str, run_id: str) -> str:
             continue
         if found:
             return found
-    return f"no result (exit {proc.returncode}): {proc.stdout[-300:]} {proc.stderr[-300:]}"
+    print(proc.stdout[-4000:], proc.stderr[-4000:], sep="\n", flush=True)
+    return f"no result (exit {proc.returncode})"
 
 
 def write_report(rows: list[dict[str, Any]], out: Path, total: int) -> int:
@@ -88,9 +93,25 @@ def main() -> int:
     ap.add_argument("ids_file")
     ap.add_argument("--records", default="eval/data/swt_records.jsonl")
     ap.add_argument("--out", default="eval/gold-agreement.md")
-    ap.add_argument("--timeout", type=float, default=900.0)
+    ap.add_argument("--timeout", type=float, default=300.0, help="seconds per test run")
+    ap.add_argument("--only", help="run just this instance (one matrix job per instance)")
+    ap.add_argument("--merge", help="directory of per-instance JSON files: write the report")
     args = ap.parse_args()
     ids = Path(args.ids_file).read_text().split()
+    if args.merge:
+        rows = []
+        for f in sorted(Path(args.merge).rglob("*.json")):
+            rows += [r for r in json.loads(f.read_text()) if r.get("instance_id") in ids]
+        rows.sort(key=lambda r: ids.index(r["instance_id"]))
+        missing = [i for i in ids if i not in {r["instance_id"] for r in rows}]
+        for iid in missing:
+            rows.append({"instance_id": iid, "ours": "not run", "official": "not run",
+                         "agree": False, "seconds": 0, "error": "no result from its job"})
+        agree = write_report(rows, Path(args.out), len(ids))
+        print(f"agreement: {agree}/{len(ids)}")
+        return 0 if agree == len(ids) else 1
+    if args.only:
+        ids = [args.only]
     ds = SWTBenchDataset(args.records, run_id="gold-agreement")
     reap("gold-agreement")
     out = Path(args.out)
@@ -136,8 +157,8 @@ def main() -> int:
         write_report(rows, out, len(ids))  # after every instance, so a cut-off run keeps it
 
     agree = write_report(rows, Path(args.out), len(ids))
-    print(f"agreement: {agree}/{len(rows)}")
-    return 0 if agree == len(rows) else 1
+    print(f"agreement: {agree}/{len(ids)}")
+    return 0 if agree == len(ids) else 1
 
 
 if __name__ == "__main__":
