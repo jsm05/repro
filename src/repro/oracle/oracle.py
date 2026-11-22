@@ -31,6 +31,12 @@ def _label(before: TestStatus, after: list[TestStatus]) -> str:
     return f"{STATUS_LETTER[before]}→{a}"
 
 
+def _docstring_id(test_id: str) -> bool:
+    """A Django test named by its docstring ("path::Some sentence."), not a node id."""
+    name = test_id.split("::", 1)[1] if "::" in test_id else ""
+    return " " in name and "[" not in name
+
+
 def run_oracle(
     candidate: Candidate | None,
     fix_patch: str,
@@ -68,7 +74,9 @@ def run_oracle(
         return out(InstanceOutcome.WRONG_TEST, "candidate diff touches no files")
     # Also ask for candidate tests that live outside the touched files (a Django test
     # inherited by a test case in another module, D-M6-14).
-    targets = files + [t for t in candidate.test_ids if t.split("::")[0] not in files]
+    # Docstring-named Django tests are asked for by id too, so the runner can match them.
+    targets = files + [t for t in candidate.test_ids
+                       if t.split("::")[0] not in files or _docstring_id(t)]
 
     sb = factory()
     try:

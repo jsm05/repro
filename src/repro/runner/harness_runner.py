@@ -40,6 +40,31 @@ def trace_source() -> str:
     return resources.files("repro.runner").joinpath("repro_trace.py").read_text("utf-8")
 
 
+_DJANGO_NAME_LINE = re.compile(r"^(?P<name>\w+ \([\w.]+\))\s*$")
+_DJANGO_STATUS_LINE = re.compile(r"^(?P<doc>.+?) \.\.\. (?P<status>ok|FAIL|ERROR|skipped)\b")
+_DJANGO_STATUS = {"ok": "PASSED", "FAIL": "FAILED", "ERROR": "ERROR", "skipped": "SKIPPED"}
+
+
+def django_docstring_statuses(log: str) -> dict[str, str]:
+    """Statuses of tests whose docstring Django printed on the line after the name:
+
+        test_sorted_imports (migrations.test_writer.WriterTests.test_sorted_imports)
+        #24155 - Tests ordering of imports. ... FAIL
+
+    The harness's parser only knows names that start with `test`, so it drops these.
+    Both the real name and the docstring line get the status (SWE-bench sometimes uses
+    the docstring as the test's name)."""
+    out: dict[str, str] = {}
+    lines = log.splitlines()
+    for prev, line in zip(lines, lines[1:], strict=False):
+        n, s = _DJANGO_NAME_LINE.match(prev.strip()), _DJANGO_STATUS_LINE.match(line.strip())
+        if n and s:
+            status = _DJANGO_STATUS[s.group("status")]
+            out[n.group("name")] = status
+            out[s.group("doc").strip()] = status
+    return out
+
+
 def parse_traceback(tb: str, workdir: str) -> FailureDetail:
     root = os.path.normpath(workdir)
     frames = []
@@ -167,6 +192,9 @@ def run_harness_tests(sandbox: Sandbox, harness: Any, test_ids: list[str], *,
     result = sandbox.exec(cmd, timeout_s, env)
     log = result.stdout + "\n" + result.stderr
     statuses = swt.log_parser(harness.repo)(log)
+    if fw == "django":
+        for name, st in django_docstring_statuses(log).items():
+            statuses.setdefault(name, st)
     calls: dict[str, list[str]] | None = None
     if trace:
         try:
