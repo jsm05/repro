@@ -11,6 +11,7 @@ counts as FAILED here. A requested test missing from the log did not run (ERROR)
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import shlex
@@ -68,34 +69,48 @@ def _label(framework: str, test_id: str) -> str:
     return test_id.split("::", 1)[0]
 
 
-def _id_for_name(framework: str, name: str, test_ids: list[str]) -> str | None:
+def _id_for_name(framework: str, name: str, test_ids: list[str],
+                 defs: dict[str, str] | None = None) -> str | None:
+    """Map a runner's test name to our id. Requested entries may be test ids or whole
+    files (the oracle asks for files); a test in a requested file gets its own id."""
+    files = {t for t in test_ids if "::" not in t}
     if framework == "django":
         from repro.datasets.swtbench import django_id
 
         tid = django_id(name)
-        return tid if tid in test_ids else None
+        if tid is None:
+            return None
+        return tid if tid in test_ids or tid.split("::")[0] in files else None
     for t in test_ids:  # sympy: names are bare function names
-        if t.split("::")[-1] == name:
+        if "::" in t and t.split("::")[-1] == name:
             return t
+    for path in sorted(files):
+        if re.search(rf"^def {re.escape(name)}\s*\(", (defs or {}).get(path, ""), re.M):
+            return f"{path}::{name}"
+    if len(files) == 1 and not defs:
+        return f"{next(iter(files))}::{name}"
     return None
 
 
 def parse_harness_run(framework: str, statuses: dict[str, str], log: str,
                       test_ids: list[str], workdir: str,
-                      calls: dict[str, list[str]] | None) -> dict[str, TestOutcome]:
+                      calls: dict[str, list[str]] | None,
+                      defs: dict[str, str] | None = None) -> dict[str, TestOutcome]:
     by_id: dict[str, str] = {}
     for name, st in statuses.items():
-        tid = _id_for_name(framework, name, test_ids)
+        tid = _id_for_name(framework, name, test_ids, defs)
         if tid is not None:
             by_id[tid] = st
     blocks: dict[str, str] = {}
     pattern = _DJANGO_BLOCK if framework == "django" else _SYMPY_BLOCK
     for m in pattern.finditer(log):
-        tid = _id_for_name(framework, m.group("name").strip(), test_ids)
+        tid = _id_for_name(framework, m.group("name").strip(), test_ids, defs)
         if tid is not None:
             blocks[tid] = m.group("tb")
+    wanted = [t for t in test_ids if "::" in t]
+    wanted += sorted(t for t in by_id if t not in wanted)
     out: dict[str, TestOutcome] = {}
-    for t in test_ids:
+    for t in wanted:
         raw = by_id.get(t)
         repo_calls = None
         if calls is not None:
@@ -147,7 +162,20 @@ def run_harness_tests(sandbox: Sandbox, harness: Any, test_ids: list[str], *,
         except FileNotFoundError:
             calls = None
         sandbox.delete_file(trace_rel)
-    outcomes = parse_harness_run(fw, statuses, log, list(test_ids), workdir, calls)
+    defs: dict[str, str] = {}
+    if fw == "sympy":
+        for path in {t.split("::")[0] for t in test_ids}:
+            try:
+                defs[path] = sandbox.get_file(path).decode("utf-8", errors="replace")
+            except (FileNotFoundError, OSError):
+                defs[path] = ""
+    outcomes = parse_harness_run(fw, statuses, log, list(test_ids), workdir, calls, defs)
+    if any(o.note == "not in test log" for o in outcomes.values()) or not outcomes:
+        log_ = logging.getLogger(__name__)
+        log_.warning("harness run: %d requested test(s) missing from the log; cmd=%s exit=%s\n"
+                     "--- log head ---\n%s\n--- log tail ---\n%s", sum(
+                         1 for o in outcomes.values() if o.note == "not in test log"), cmd,
+                     result.exit_code, log[:1500], log[-2500:])
     if result.timed_out:
         outcomes = {t: (o if o.status is not TestStatus.ERROR or o.note != "not in test log"
                         else o.model_copy(update={"status": TestStatus.TIMEOUT}))

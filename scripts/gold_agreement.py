@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import subprocess
 import sys
@@ -96,6 +97,8 @@ def write_report(rows: list[dict[str, Any]], out: Path, total: int) -> int:
 
 
 def main() -> int:
+    logging.basicConfig(level=logging.INFO, stream=sys.stderr,
+                        format="%(levelname)s %(name)s: %(message)s")
     ap = argparse.ArgumentParser()
     ap.add_argument("ids_file")
     ap.add_argument("--records", default="eval/data/swt_records.jsonl")

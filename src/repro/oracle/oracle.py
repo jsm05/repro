@@ -104,9 +104,13 @@ def run_oracle(
     cand = list(candidate.test_ids)
     flaky = [t for t in cand if len(set(transitions[t].after)) > 1]
     o1 = all(all(s is TestStatus.PASSED for s in transitions[t].after) for t in cand)
+    # Collateral: another test in the touched files that passed on the buggy code and
+    # fails once the fix is in (P→F). Tests that already fail before (F→F, often the
+    # environment) are not the candidate's doing (D-M6-13).
     collateral = [
         t for t, tr in transitions.items()
-        if t not in cand and any(s in BAD_AFTER for s in tr.after)
+        if t not in cand and tr.before is TestStatus.PASSED
+        and any(s in BAD_AFTER for s in tr.after)
     ]
     o2 = not collateral
     f2p = [t for t in cand if transitions[t].label == "F→P"]
