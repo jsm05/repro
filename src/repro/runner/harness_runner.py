@@ -41,27 +41,38 @@ def trace_source() -> str:
 
 
 _DJANGO_NAME_LINE = re.compile(r"^(?P<name>\w+ \([\w.]+\))\s*$")
+_DJANGO_ONE_LINE = re.compile(
+    r"^(?P<name>\w+ \([\w.]+\)) \.\.\. (?P<status>ok|FAIL|ERROR|skipped)\b")
 _DJANGO_STATUS_LINE = re.compile(r"^(?P<doc>.+?) \.\.\. (?P<status>ok|FAIL|ERROR|skipped)\b")
+_DJANGO_HEADER = re.compile(r"^(?P<status>FAIL|ERROR): (?P<name>\w+ \([\w.]+\))\s*$")
 _DJANGO_STATUS = {"ok": "PASSED", "FAIL": "FAILED", "ERROR": "ERROR", "skipped": "SKIPPED"}
 
 
-def django_docstring_statuses(log: str) -> dict[str, str]:
-    """Statuses of tests whose docstring Django printed on the line after the name:
+def django_line_statuses(log: str) -> dict[str, str]:
+    """Django results read strictly line by line.
 
-        test_sorted_imports (migrations.test_writer.WriterTests.test_sorted_imports)
-        #24155 - Tests ordering of imports. ... FAIL
-
-    The harness's parser only knows names that start with `test`, so it drops these.
-    Both the real name and the docstring line get the status (SWE-bench sometimes uses
-    the docstring as the test's name)."""
+    The harness's Django regex can run across lines and swallow other tests, and it has
+    no entry for `FAIL`, so whole stretches of a run go missing (D-M6-17). This reads:
+      `test_x (mod.Class.test_x) ... ok`                one-line result
+      `test_x (mod.Class.test_x)` + `Docstring ... FAIL` result with a docstring; both the
+                                                         name and the docstring get it
+      `FAIL: test_x (mod.Class.test_x)`                 failure header, wins over the rest
+    A test that printed between `...` and its status isn't matched here; the harness's
+    parser still covers it."""
     out: dict[str, str] = {}
-    lines = log.splitlines()
-    for prev, line in zip(lines, lines[1:], strict=False):
-        n, s = _DJANGO_NAME_LINE.match(prev.strip()), _DJANGO_STATUS_LINE.match(line.strip())
-        if n and s:
+    headers: dict[str, str] = {}
+    lines = [ln.strip() for ln in log.splitlines()]
+    for i, line in enumerate(lines):
+        if m := _DJANGO_ONE_LINE.match(line):
+            out[m.group("name")] = _DJANGO_STATUS[m.group("status")]
+        elif (n := _DJANGO_NAME_LINE.match(line)) and i + 1 < len(lines) \
+                and (s := _DJANGO_STATUS_LINE.match(lines[i + 1])):
             status = _DJANGO_STATUS[s.group("status")]
             out[n.group("name")] = status
             out[s.group("doc").strip()] = status
+        elif h := _DJANGO_HEADER.match(line):
+            headers[h.group("name")] = _DJANGO_STATUS[h.group("status")]
+    out.update(headers)
     return out
 
 
@@ -193,8 +204,7 @@ def run_harness_tests(sandbox: Sandbox, harness: Any, test_ids: list[str], *,
     log = result.stdout + "\n" + result.stderr
     statuses = swt.log_parser(harness.repo)(log)
     if fw == "django":
-        for name, st in django_docstring_statuses(log).items():
-            statuses.setdefault(name, st)
+        statuses.update(django_line_statuses(log))
     calls: dict[str, list[str]] | None = None
     if trace:
         try:
