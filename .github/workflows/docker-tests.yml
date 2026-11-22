@@ -12,6 +12,9 @@ on:
         description: "Also run gold agreement on the pilot (one job per instance)"
         type: boolean
         default: true
+      only:
+        description: "Optional: space-separated pilot ids to rerun (others keep their last result)"
+        default: ""
 
 permissions:
   contents: write
@@ -50,7 +53,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Pilot ids
         id: ids
-        run: python -c "import json; print('ids=' + json.dumps(open('eval/samples/pilot_10.txt').read().split()))" >> "$GITHUB_OUTPUT"
+        env:
+          ONLY: ${{ inputs.only }}
+        run: python -c "import json, os; ids = os.environ['ONLY'].split() or open('eval/samples/pilot_10.txt').read().split(); print('ids=' + json.dumps(ids))" >> "$GITHUB_OUTPUT"
 
   gold:
     needs: pilot
@@ -113,8 +118,10 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: /tmp/gold
-      - name: Merge
-        run: python scripts/gold_agreement.py eval/samples/pilot_10.txt --merge /tmp/gold --out eval/gold-agreement.md || true
+      - name: Merge (instances not rerun keep their last committed result)
+        run: |
+          if [ -f eval/gold-agreement.json ]; then mkdir -p /tmp/gold/previous && cp eval/gold-agreement.json /tmp/gold/previous/; fi
+          python scripts/gold_agreement.py eval/samples/pilot_10.txt --merge /tmp/gold --out eval/gold-agreement.md || true
       - name: Commit the gold agreement report
         run: |
           git config user.name "github-actions[bot]"

@@ -114,9 +114,13 @@ def main() -> int:
     args = ap.parse_args()
     ids = Path(args.ids_file).read_text().split()
     if args.merge:
-        rows = []
-        for f in sorted(Path(args.merge).rglob("*.json")):
-            rows += [r for r in json.loads(f.read_text()) if r.get("instance_id") in ids]
+        by_id: dict[str, dict[str, Any]] = {}
+        files = sorted(Path(args.merge).rglob("*.json"), key=lambda f: "previous" not in str(f))
+        for f in files:  # the previous report first, so fresh results replace it
+            for r in json.loads(f.read_text()):
+                if r.get("instance_id") in ids:
+                    by_id[r["instance_id"]] = r
+        rows = list(by_id.values())
         rows.sort(key=lambda r: ids.index(r["instance_id"]))
         missing = [i for i in ids if i not in {r["instance_id"] for r in rows}]
         for iid in missing:
