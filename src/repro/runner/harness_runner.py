@@ -23,6 +23,7 @@ from repro.datasets import swt_harness as swt
 from repro.models import FailureDetail, Frame, TestOutcome, TestStatus
 from repro.runner.pytest_runner import SCRATCH_DIR, TestRunResult
 from repro.sandbox.base import Sandbox
+from repro.sandbox.local import cap_output
 
 _DJANGO_BLOCK = re.compile(
     r"^(?:FAIL|ERROR): (?P<name>[^\n]+)\n(?:[^\n]*\n)??-{20,}\n(?P<tb>.*?)"
@@ -40,6 +41,7 @@ def trace_source() -> str:
     return resources.files("repro.runner").joinpath("repro_trace.py").read_text("utf-8")
 
 
+LOG_CAP_BYTES = 4 * 1024 * 1024
 _DJANGO_NAME_LINE = re.compile(r"^(?P<name>\w+ \([\w.]+\))\s*$")
 _DJANGO_ONE_LINE = re.compile(
     r"^(?P<name>\w+ \([\w.]+\)) \.\.\. (?P<status>ok|FAIL|ERROR|skipped)\b")
@@ -200,8 +202,18 @@ def run_harness_tests(sandbox: Sandbox, harness: Any, test_ids: list[str], *,
         env.update({"PYTHONPATH": f"{workdir}/{SCRATCH_DIR}",
                     "REPRO_TRACE_OUT": f"{workdir}/{trace_rel}", "REPRO_ROOT": workdir})
     cmd = harness.test_cmd + " " + " ".join(shlex.quote(x) for x in labels)
-    result = sandbox.exec(cmd, timeout_s, env)
-    log = result.stdout + "\n" + result.stderr
+    # exec output is capped (16 KB, middle cut), and a long Django run loses the results
+    # in the middle. Write the whole log to a scratch file and read that (D-M6-18).
+    log_rel = f"{SCRATCH_DIR}/testlog-{uuid.uuid4().hex}.txt"
+    sandbox.put_file(log_rel, "")
+    result = sandbox.exec(f"{{ {cmd} ; }} > {shlex.quote(f'{workdir}/{log_rel}')} 2>&1",
+                          timeout_s, env)
+    try:
+        log, _ = cap_output(sandbox.get_file(log_rel), LOG_CAP_BYTES)
+    except FileNotFoundError:
+        log = ""
+    sandbox.delete_file(log_rel)
+    log = log + "\n" + result.stdout + "\n" + result.stderr
     statuses = swt.log_parser(harness.repo)(log)
     if fw == "django":
         statuses.update(django_line_statuses(log))
