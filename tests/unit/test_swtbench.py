@@ -329,3 +329,55 @@ def test_loader_repairs_trimmed_patches() -> None:
     inst, _, unmapped = record_to_instance(rec)
     assert parse_diff(inst.sealed.gold_test_patch) and parse_diff(inst.sealed.gold_fix_patch)
     assert inst.sealed.fail_to_pass == [F2P_ID] and unmapped == []
+
+
+@needs_swt
+def test_file_level_requests_expand_to_every_test_in_the_file() -> None:
+    """D-M6-13: the oracle asks for whole files; every test found there gets an outcome."""
+    from repro.datasets import swt_harness as swt
+    from repro.runner.harness_runner import parse_harness_run
+
+    log = (LOGS / "django.log").read_text()
+    out = parse_harness_run("django", swt.log_parser("django/django")(log), log,
+                            ["tests/auth_tests/test_validators.py"], "/testbed", None)
+    base = "tests/auth_tests/test_validators.py::UsernameValidatorsTests::"
+    assert {t: o.status for t, o in out.items()} == {
+        base + "test_ascii_validator": TestStatus.FAILED,
+        base + "test_raises": TestStatus.FAILED,
+        base + "test_unicode_validator": TestStatus.PASSED}
+    slog = (LOGS / "sympy.log").read_text()
+    path = "sympy/core/tests/test_basic.py"
+    defs = {path: "def test_a():\n    pass\n\ndef test_b():\n    pass\n\ndef test_c():\n    pass\n"}
+    sout = parse_harness_run("sympy", swt.log_parser("sympy/sympy")(slog), slog, [path],
+                             "/testbed", None, defs)
+    assert sorted(sout) == [f"{path}::test_{x}" for x in "abc"]
+
+
+def test_oracle_ignores_tests_that_already_failed(tmp_path: Path) -> None:
+    """D-M6-13: a test in the touched file that fails before and after (F→F) is not
+    collateral; one that passed before and fails after (P→F) is."""
+    from repro.models import Candidate, InstanceOutcome
+    from repro.oracle.oracle import run_oracle
+    from repro.sandbox.local import local_factory
+
+    repo = tmp_path / "repo"
+    (repo / "pkg").mkdir(parents=True)
+    (repo / "tests").mkdir()
+    (repo / "pkg" / "__init__.py").write_text("")
+    (repo / "pkg" / "mod.py").write_text("def double(x):\n    return x * 3\n")
+    (repo / "tests" / "test_mod.py").write_text(
+        "from pkg.mod import double\n\n\ndef test_env_broken():\n    assert False\n\n\n"
+        "def test_keeps_three():\n    assert double(1) in (2, 3)\n")
+    fix = ("diff --git a/pkg/mod.py b/pkg/mod.py\n--- a/pkg/mod.py\n+++ b/pkg/mod.py\n"
+           "@@ -1,2 +1,2 @@\n def double(x):\n-    return x * 3\n+    return x * 2\n")
+    add = ("diff --git a/tests/test_mod.py b/tests/test_mod.py\n--- a/tests/test_mod.py\n"
+           "+++ b/tests/test_mod.py\n@@ -8,2 +8,6 @@ def test_env_broken():\n"
+           " def test_keeps_three():\n     assert double(1) in (2, 3)\n+\n+\n"
+           "+def test_double():\n+    assert double(2) == 4\n")
+    cand = Candidate(diff=add, test_ids=["tests/test_mod.py::test_double"])
+    v = run_oracle(cand, fix, local_factory(repo))
+    assert v.outcome is InstanceOutcome.REPRODUCED, v.reason
+    assert v.transitions["tests/test_mod.py::test_env_broken"].label == "F→F"
+    breaking = fix.replace("x * 2", "x * 2 if x != 1 else 7")
+    v2 = run_oracle(cand, breaking, local_factory(repo))
+    assert v2.outcome is InstanceOutcome.WRONG_TEST and "O2 failed" in v2.reason
