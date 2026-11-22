@@ -33,7 +33,7 @@
   "ours": "WRONG_TEST",
   "ours_reason": "O1 failed: tests/serializers/test_jsonl.py::JsonlSerializerTestCase::test_serialize_no_only_pk_with_natural_keys E\u2192E, tests/serializers/test_jsonl.py::JsonlSerializerTestCase::test_serialize_only_pk E",
   "pass": false,
-  "seconds": 401,
+  "seconds": 430,
   "transitions": {
    "tests/serializers/models/base.py::Basic serialization works.": "F\u2192P",
    "tests/serializers/models/base.py::Deserialized content can be saved with force_insert as a parameter.": "F\u2192P",
