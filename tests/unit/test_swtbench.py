@@ -452,12 +452,12 @@ def test_docstring_in_unchanged_lines_maps_to_the_test_file() -> None:
 @needs_swt
 def test_docstring_statuses_from_the_line_after_the_name() -> None:
     """D-M6-16: Django prints a docstring on the line after the name; both get the status."""
-    from repro.runner.harness_runner import django_docstring_statuses, parse_harness_run
+    from repro.runner.harness_runner import django_line_statuses, parse_harness_run
 
     log = ("test_sorted_imports (migrations.test_writer.WriterTests.test_sorted_imports)\n"
            "#24155 - Tests ordering of imports. ... FAIL\n"
            "test_simple (migrations.test_writer.WriterTests.test_simple) ... ok\n")
-    st = django_docstring_statuses(log)
+    st = {k: v for k, v in django_line_statuses(log).items() if "test_simple" not in k}
     assert st == {"test_sorted_imports (migrations.test_writer.WriterTests.test_sorted_imports)":
                   "FAILED", "#24155 - Tests ordering of imports.": "FAILED"}
     raw = "tests/migrations/test_writer.py::#24155 - Tests ordering of imports."
@@ -466,3 +466,28 @@ def test_docstring_statuses_from_the_line_after_the_name() -> None:
     assert out[raw].status is TestStatus.FAILED
     assert out["tests/migrations/test_writer.py::WriterTests::test_sorted_imports"].status \
         is TestStatus.FAILED
+
+
+@needs_swt
+def test_django_line_parse_beats_the_greedy_harness_regex() -> None:
+    """D-M6-17: the harness's Django regex swallows tests across lines and doesn't know FAIL.
+    The strict line parse recovers every one-line result and wins over the harness's guess."""
+    from repro.datasets import swt_harness as swt
+    from repro.runner.harness_runner import django_line_statuses
+
+    log = ("test_a (s.test_jsonl.C.test_a) ... FAIL\n"
+           "test_one_to_one_as_pk (s.test_jsonl.C.test_one_to_one_as_pk) ... ok\n"
+           "test_serialize_only_pk (s.test_jsonl.C.test_serialize_only_pk) ... ok\n"
+           "test_skip (s.test_jsonl.C.test_skip) ... skipped 'no yaml'\n"
+           "test_err (s.test_jsonl.C.test_err) ... ERROR\n"
+           "\n======================================================================\n"
+           "FAIL: test_a (s.test_jsonl.C.test_a)\n")
+    ours = django_line_statuses(log)
+    assert ours == {"test_a (s.test_jsonl.C.test_a)": "FAILED",
+                    "test_one_to_one_as_pk (s.test_jsonl.C.test_one_to_one_as_pk)": "PASSED",
+                    "test_serialize_only_pk (s.test_jsonl.C.test_serialize_only_pk)": "PASSED",
+                    "test_skip (s.test_jsonl.C.test_skip)": "SKIPPED",
+                    "test_err (s.test_jsonl.C.test_err)": "ERROR"}
+    # The harness's own parser loses at least one of these; that's the bug being covered.
+    theirs = swt.log_parser("django/django")(log)
+    assert set(theirs) != set(ours) or any(theirs[k] != ours[k] for k in theirs)
