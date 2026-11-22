@@ -1,13 +1,14 @@
 [
  {
   "agree": false,
-  "disk_free_gb": 112.1,
+  "disk_free_gb": 112.2,
+  "exception": true,
   "instance_id": "django__django-15127",
   "official": "unresolved",
   "ours": "REPRODUCED",
   "ours_reason": "F\u2192P: tests/messages_tests/tests.py::TestLevelTags::test_override_settings_level_tags",
-  "pass": false,
-  "seconds": 428,
+  "pass": true,
+  "seconds": 424,
   "transitions": {
    "tests/messages_tests/tests.py::TestLevelTags::test_override_settings_level_tags": "F\u2192P"
   }
@@ -15,12 +16,13 @@
  {
   "agree": false,
   "disk_free_gb": 112.0,
+  "exception": true,
   "instance_id": "django__django-16662",
   "official": "unresolved",
   "ours": "REPRODUCED",
   "ours_reason": "F\u2192P: tests/migrations/test_writer.py::#24155 - Tests ordering of imports.",
-  "pass": false,
-  "seconds": 391,
+  "pass": true,
+  "seconds": 359,
   "transitions": {
    "tests/migrations/test_writer.py::#24155 - Tests ordering of imports.": "F\u2192P"
   }
@@ -28,12 +30,13 @@
  {
   "agree": true,
   "disk_free_gb": 112.0,
+  "exception": false,
   "instance_id": "django__django-16938",
   "official": "resolved",
   "ours": "REPRODUCED",
   "ours_reason": "F\u2192P: tests/serializers/models/base.py::The ability to create new objects by modifying serialized content., tests/serializers/models/base.py::Deserialized content can be saved with force_insert as a pa",
   "pass": true,
-  "seconds": 434,
+  "seconds": 369,
   "transitions": {
    "tests/serializers/models/base.py::Basic serialization works.": "F\u2192P",
    "tests/serializers/models/base.py::Deserialized content can be saved with force_insert as a parameter.": "F\u2192P",
@@ -63,12 +66,13 @@
  {
   "agree": true,
   "disk_free_gb": 112.5,
+  "exception": false,
   "instance_id": "sympy__sympy-13647",
   "official": "resolved",
   "ours": "REPRODUCED",
   "ours_reason": "F\u2192P: sympy/matrices/tests/test_commonmatrix.py::test_col_insert",
   "pass": true,
-  "seconds": 450,
+  "seconds": 445,
   "transitions": {
    "sympy/matrices/tests/test_commonmatrix.py::test_col_insert": "F\u2192P"
   }
@@ -76,25 +80,27 @@
  {
   "agree": true,
   "disk_free_gb": 112.5,
+  "exception": false,
   "instance_id": "sympy__sympy-23262",
   "official": "resolved",
   "ours": "REPRODUCED",
   "ours_reason": "F\u2192P: sympy/utilities/tests/test_lambdify.py::test_issue_14941",
   "pass": true,
-  "seconds": 394,
+  "seconds": 330,
   "transitions": {
    "sympy/utilities/tests/test_lambdify.py::test_issue_14941": "F\u2192P"
   }
  },
  {
-  "agree": false,
+  "agree": true,
   "disk_free_gb": 105.9,
+  "exception": false,
   "instance_id": "matplotlib__matplotlib-24570",
   "official": "resolved",
-  "ours": "WRONG_TEST",
-  "ours_reason": "O2 failed: lib/matplotlib/tests/test_offsetbox.py::test_picking[axes points-text] P\u2192~",
-  "pass": false,
-  "seconds": 2687,
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: lib/matplotlib/tests/test_offsetbox.py::test_packers[bottom], lib/matplotlib/tests/test_offsetbox.py::test_packers[top]",
+  "pass": true,
+  "seconds": 2698,
   "transitions": {
    "lib/matplotlib/tests/test_offsetbox.py::test_packers[bottom]": "F\u2192P",
    "lib/matplotlib/tests/test_offsetbox.py::test_packers[top]": "F\u2192P"
@@ -103,25 +109,27 @@
  {
   "agree": true,
   "disk_free_gb": 111.2,
+  "exception": false,
   "instance_id": "scikit-learn__scikit-learn-10844",
   "official": "resolved",
   "ours": "REPRODUCED",
   "ours_reason": "F\u2192P: sklearn/metrics/cluster/tests/test_supervised.py::test_int_overflow_mutual_info_fowlkes_mallows_score",
   "pass": true,
-  "seconds": 726,
+  "seconds": 744,
   "transitions": {
    "sklearn/metrics/cluster/tests/test_supervised.py::test_int_overflow_mutual_info_fowlkes_mallows_score": "F\u2192P"
   }
  },
  {
   "agree": true,
-  "disk_free_gb": 116.2,
+  "disk_free_gb": 112.5,
+  "exception": false,
   "instance_id": "pytest-dev__pytest-10051",
   "official": "resolved",
   "ours": "REPRODUCED",
   "ours_reason": "F\u2192P: testing/logging/test_fixture.py::test_clear_for_call_stage",
   "pass": true,
-  "seconds": 288,
+  "seconds": 363,
   "transitions": {
    "testing/logging/test_fixture.py::test_clear_for_call_stage": "F\u2192P"
   }
@@ -129,25 +137,27 @@
  {
   "agree": true,
   "disk_free_gb": 108.9,
+  "exception": false,
   "instance_id": "pydata__xarray-3677",
   "official": "resolved",
   "ours": "REPRODUCED",
   "ours_reason": "F\u2192P: xarray/tests/test_merge.py::TestMergeMethod::test_merge_dataarray",
   "pass": true,
-  "seconds": 2366,
+  "seconds": 1082,
   "transitions": {
    "xarray/tests/test_merge.py::TestMergeMethod::test_merge_dataarray": "F\u2192P"
   }
  },
  {
   "agree": true,
-  "disk_free_gb": 112.5,
+  "disk_free_gb": 116.1,
+  "exception": false,
   "instance_id": "psf__requests-6028",
   "official": "resolved",
   "ours": "REPRODUCED",
   "ours_reason": "F\u2192P: tests/test_utils.py::test_prepend_scheme_if_needed[http://user:pass@example.com/path?query-http://user:pass@example.com/path?query], tests/test_utils.py::test_prepend_scheme_if_needed[http://user",
   "pass": true,
-  "seconds": 348,
+  "seconds": 292,
   "transitions": {
    "tests/test_utils.py::test_prepend_scheme_if_needed[http://user:pass@example.com/path?query-http://user:pass@example.com/path?query]": "F\u2192P",
    "tests/test_utils.py::test_prepend_scheme_if_needed[http://user@example.com/path?query-http://user@example.com/path?query]": "F\u2192P"
