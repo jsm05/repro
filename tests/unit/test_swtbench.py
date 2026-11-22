@@ -381,3 +381,57 @@ def test_oracle_ignores_tests_that_already_failed(tmp_path: Path) -> None:
     breaking = fix.replace("x * 2", "x * 2 if x != 1 else 7")
     v2 = run_oracle(cand, breaking, local_factory(repo))
     assert v2.outcome is InstanceOutcome.WRONG_TEST and "O2 failed" in v2.reason
+
+
+@needs_swt
+def test_docstring_named_django_tests() -> None:
+    """D-M6-14: a fail-to-pass name that is a docstring maps to its file and matches the log."""
+    from repro.datasets.swtbench import record_to_instance
+    from repro.runner.harness_runner import _label, parse_harness_run
+
+    patch = TEST_PATCH.replace(
+        "+        v = validators.ASCIIUsernameValidator()\n",
+        '+        """#24155 - Tests trailing newlines."""\n'
+        "+        v = validators.ASCIIUsernameValidator()\n").replace("@@ -10,2 +10,6 @@",
+                                                              "@@ -10,2 +10,7 @@")
+    rec = dict(DJANGO_REC, test_patch=patch,
+               FAIL_TO_PASS=json.dumps(["#24155 - Tests trailing newlines."]))
+    inst, _, unmapped = record_to_instance(rec)
+    tid = "tests/auth_tests/test_validators.py::#24155 - Tests trailing newlines."
+    assert inst.sealed.fail_to_pass == [tid] and unmapped == []
+    assert _label("django", tid) == "auth_tests.test_validators"
+    log = ("#24155 - Tests trailing newlines. ... FAIL\n\n" + "=" * 70 + "\n"
+           "FAIL: #24155 - Tests trailing newlines.\n" + "-" * 70 + "\n"
+           "Traceback (most recent call last):\n  File \"/testbed/tests/auth_tests/"
+           "test_validators.py\", line 14, in test_x\n    v(1)\nAssertionError: boom\n")
+    statuses = {"#24155 - Tests trailing newlines.": "FAILED"}
+    defs = {"tests/auth_tests/test_validators.py": patch}
+    out = parse_harness_run("django", statuses, log, ["tests/auth_tests/test_validators.py"],
+                            "/testbed", None, defs)
+    assert out[tid].status is TestStatus.FAILED
+    assert out[tid].failure is not None and out[tid].failure.exc_type == "AssertionError"
+
+
+def test_oracle_also_runs_candidate_tests_outside_touched_files(tmp_path: Path) -> None:
+    """D-M6-14: a candidate test id in a file the diff does not touch is still run."""
+    from repro.models import Candidate, InstanceOutcome
+    from repro.oracle.oracle import run_oracle
+    from repro.sandbox.local import local_factory
+
+    repo = tmp_path / "repo"
+    (repo / "pkg").mkdir(parents=True)
+    (repo / "tests").mkdir()
+    (repo / "pkg" / "__init__.py").write_text("")
+    (repo / "pkg" / "mod.py").write_text("def double(x):\n    return x * 3\n")
+    (repo / "tests" / "base.py").write_text("")
+    (repo / "tests" / "test_inherit.py").write_text(
+        "from tests.base import *  # noqa\n\n\nclass TestKids(Base):\n    pass\n")
+    add = ("diff --git a/tests/base.py b/tests/base.py\n--- a/tests/base.py\n"
+           "+++ b/tests/base.py\n@@ -0,0 +1,6 @@\n+from pkg.mod import double\n+\n+\n"
+           "+class Base:\n+    def test_double(self):\n+        assert double(2) == 4\n")
+    fix = ("diff --git a/pkg/mod.py b/pkg/mod.py\n--- a/pkg/mod.py\n+++ b/pkg/mod.py\n"
+           "@@ -1,2 +1,2 @@\n def double(x):\n-    return x * 3\n+    return x * 2\n")
+    (repo / "tests" / "__init__.py").write_text("")
+    cand = Candidate(diff=add, test_ids=["tests/test_inherit.py::TestKids::test_double"])
+    v = run_oracle(cand, fix, local_factory(repo))
+    assert v.outcome is InstanceOutcome.REPRODUCED, v.reason
