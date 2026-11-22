@@ -435,3 +435,15 @@ def test_oracle_also_runs_candidate_tests_outside_touched_files(tmp_path: Path) 
     cand = Candidate(diff=add, test_ids=["tests/test_inherit.py::TestKids::test_double"])
     v = run_oracle(cand, fix, local_factory(repo))
     assert v.outcome is InstanceOutcome.REPRODUCED, v.reason
+
+
+@needs_swt
+def test_docstring_in_unchanged_lines_maps_to_the_test_file() -> None:
+    """D-M6-15: a docstring name that is not in the patch's added lines still maps."""
+    from repro.datasets.swtbench import record_to_instance
+
+    rec = dict(DJANGO_REC, FAIL_TO_PASS=json.dumps(["An existing test's docstring."]))
+    inst, _, unmapped = record_to_instance(rec)
+    assert inst.sealed.fail_to_pass == [
+        "tests/auth_tests/test_validators.py::An existing test's docstring."]
+    assert unmapped == []
