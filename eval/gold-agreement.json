@@ -1,13 +1,13 @@
 [
  {
   "agree": false,
-  "disk_free_gb": 115.8,
+  "disk_free_gb": 112.2,
   "instance_id": "django__django-15127",
   "official": "unresolved",
   "ours": "REPRODUCED",
   "ours_reason": "F\u2192P: tests/messages_tests/tests.py::TestLevelTags::test_override_settings_level_tags",
   "pass": false,
-  "seconds": 327,
+  "seconds": 425,
   "transitions": {
    "tests/messages_tests/tests.py::TestLevelTags::test_override_settings_level_tags": "F\u2192P"
   }
@@ -20,7 +20,7 @@
   "ours": "WRONG_TEST",
   "ours_reason": "no candidate test goes F\u2192P",
   "pass": false,
-  "seconds": 457,
+  "seconds": 350,
   "transitions": {}
  },
  {
@@ -31,7 +31,7 @@
   "ours": "WRONG_TEST",
   "ours_reason": "O1 failed: tests/serializers/test_jsonl.py::JsonlSerializerTestCase::test_serialize_no_only_pk_with_natural_keys E\u2192E, tests/serializers/test_jsonl.py::JsonlSerializerTestCase::test_serialize_only_pk E",
   "pass": false,
-  "seconds": 410,
+  "seconds": 381,
   "transitions": {
    "tests/serializers/test_json.py::JsonSerializerTestCase::test_serialize_no_only_pk_with_natural_keys": "F\u2192P",
    "tests/serializers/test_json.py::JsonSerializerTestCase::test_serialize_only_pk": "F\u2192P",
@@ -53,13 +53,13 @@
  },
  {
   "agree": true,
-  "disk_free_gb": 116.2,
+  "disk_free_gb": 112.5,
   "instance_id": "sympy__sympy-13647",
   "official": "resolved",
   "ours": "REPRODUCED",
   "ours_reason": "F\u2192P: sympy/matrices/tests/test_commonmatrix.py::test_col_insert",
   "pass": true,
-  "seconds": 348,
+  "seconds": 441,
   "transitions": {
    "sympy/matrices/tests/test_commonmatrix.py::test_col_insert": "F\u2192P"
   }
@@ -72,10 +72,20 @@
   "ours": "REPRODUCED",
   "ours_reason": "F\u2192P: sympy/utilities/tests/test_lambdify.py::test_issue_14941",
   "pass": true,
-  "seconds": 392,
+  "seconds": 337,
   "transitions": {
    "sympy/utilities/tests/test_lambdify.py::test_issue_14941": "F\u2192P"
   }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 113.2,
+  "error": "TimeoutExpired: Command '['/opt/hostedtoolcache/Python/3.11.18/x64/bin/python', '/home/runner/work/repro/repro/src/repro/datasets/_swt_driver.py']' timed out after 7200 seconds",
+  "instance_id": "matplotlib__matplotlib-24570",
+  "official": "not run",
+  "ours": "ERROR",
+  "pass": false,
+  "seconds": 7200
  },
  {
   "agree": true,
@@ -85,7 +95,7 @@
   "ours": "REPRODUCED",
   "ours_reason": "F\u2192P: sklearn/metrics/cluster/tests/test_supervised.py::test_int_overflow_mutual_info_fowlkes_mallows_score",
   "pass": true,
-  "seconds": 557,
+  "seconds": 740,
   "transitions": {
    "sklearn/metrics/cluster/tests/test_supervised.py::test_int_overflow_mutual_info_fowlkes_mallows_score": "F\u2192P"
   }
@@ -98,7 +108,7 @@
   "ours": "REPRODUCED",
   "ours_reason": "F\u2192P: testing/logging/test_fixture.py::test_clear_for_call_stage",
   "pass": true,
-  "seconds": 367,
+  "seconds": 360,
   "transitions": {
    "testing/logging/test_fixture.py::test_clear_for_call_stage": "F\u2192P"
   }
@@ -111,31 +121,23 @@
   "ours": "REPRODUCED",
   "ours_reason": "F\u2192P: xarray/tests/test_merge.py::TestMergeMethod::test_merge_dataarray",
   "pass": true,
-  "seconds": 1252,
+  "seconds": 1362,
   "transitions": {
    "xarray/tests/test_merge.py::TestMergeMethod::test_merge_dataarray": "F\u2192P"
   }
  },
  {
   "agree": true,
-  "disk_free_gb": 112.5,
+  "disk_free_gb": 116.1,
   "instance_id": "psf__requests-6028",
   "official": "resolved",
   "ours": "REPRODUCED",
   "ours_reason": "F\u2192P: tests/test_utils.py::test_prepend_scheme_if_needed[http://user:pass@example.com/path?query-http://user:pass@example.com/path?query], tests/test_utils.py::test_prepend_scheme_if_needed[http://user",
   "pass": true,
-  "seconds": 371,
+  "seconds": 299,
   "transitions": {
    "tests/test_utils.py::test_prepend_scheme_if_needed[http://user:pass@example.com/path?query-http://user:pass@example.com/path?query]": "F\u2192P",
    "tests/test_utils.py::test_prepend_scheme_if_needed[http://user@example.com/path?query-http://user@example.com/path?query]": "F\u2192P"
   }
- },
- {
-  "agree": false,
-  "error": "no result from its job",
-  "instance_id": "matplotlib__matplotlib-24570",
-  "official": "not run",
-  "ours": "not run",
-  "seconds": 0
  }
 ]
