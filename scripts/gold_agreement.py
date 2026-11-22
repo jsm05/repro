@@ -54,7 +54,9 @@ def official(instance_id: str, run_id: str) -> str:
          "--predictions_path", "gold", "--max_workers", "1", "--instance_ids", instance_id,
          "--run_id", run_id, "--cache_level", "instance", "--clean", "false",
          "--compute_coverage", "false", "--timeout", "900"],
-        cwd=root, capture_output=True, text=True, timeout=3600, check=False)
+        cwd=root, capture_output=True, text=True, timeout=1500, check=False)
+    print("official harness output (tail):", proc.stdout[-3000:], proc.stderr[-2000:],
+          sep="\n", flush=True)
     candidates = [p for p in root.rglob("*.json") if run_id in str(p)]
     if not candidates and (root / "evaluation_results").is_dir():
         candidates = sorted((root / "evaluation_results").rglob("*.json"))
@@ -65,7 +67,6 @@ def official(instance_id: str, run_id: str) -> str:
             continue
         if found:
             return found
-    print(proc.stdout[-4000:], proc.stderr[-4000:], sep="\n", flush=True)
     return f"no result (exit {proc.returncode})"
 
 
@@ -137,8 +138,14 @@ def main() -> int:
             continue
         t0 = time.monotonic()
         row: dict[str, Any] = {"instance_id": iid}
+
+        def stage(msg: str, iid: str = iid) -> None:
+            print(f"[{time.strftime('%H:%M:%S')}] {iid}: {msg}", flush=True)
+
         try:
+            stage("building and hardening the image")
             loaded = ds.load(iid)
+            stage("image ready; running our oracle")
             sealed = loaded.instance.sealed
             cand = Candidate(diff=sealed.gold_test_patch, test_ids=sealed.fail_to_pass,
                              origin="gold")
@@ -151,7 +158,9 @@ def main() -> int:
             row["ours_reason"] = v.reason[:200]
             row["transitions"] = {t: tr.label for t, tr in v.transitions.items()
                                   if t in sealed.fail_to_pass}
+            stage(f"our oracle: {v.outcome.value}; running the official harness")
             row["official"] = official(iid, f"gold-{iid}")
+            stage(f"official harness: {row['official']}")
         except Exception as exc:  # record and move on to the next instance
             row.setdefault("ours", "ERROR")
             row["error"] = f"{type(exc).__name__}: {exc}"[:400]

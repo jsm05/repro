@@ -55,7 +55,7 @@ jobs:
   gold:
     needs: pilot
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 175
     strategy:
       fail-fast: false
       matrix:
@@ -83,7 +83,7 @@ jobs:
           echo "$INSTANCE" > /tmp/one.txt
           python scripts/export_instances.py --ids-file /tmp/one.txt --out /tmp/pilot_records.jsonl
       - name: Gold agreement (T6.D8)
-        timeout-minutes: 105
+        timeout-minutes: 160
         env:
           REPRO_PILOT_RECORDS: /tmp/pilot_records.jsonl
           REPRO_PILOT_ONLY: ${{ matrix.instance }}

@@ -103,7 +103,16 @@ def test_files(test_patch: str) -> dict[str, str]:
 
 def to_test_id(framework: str, name: str, test_patch: str) -> str | None:
     if framework == "django":
-        return django_id(name)
+        tid = django_id(name)
+        if tid is not None:
+            return tid
+        # Django prints a docstring's first line instead of the name when a test has one,
+        # and SWE-bench keeps that ("#24155 - Tests ordering of imports."). Keep it as is,
+        # tied to the test file whose added lines contain it (D-M6-14).
+        for path, added in test_files(test_patch).items():
+            if name.strip() and name.strip() in added:
+                return f"{path}::{name.strip()}"
+        return None
     if framework == "sympy":
         for path, added in test_files(test_patch).items():
             if re.search(rf"^def {re.escape(name)}\s*\(", added, re.M):

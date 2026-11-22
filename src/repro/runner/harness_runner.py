@@ -65,6 +65,9 @@ def _label(framework: str, test_id: str) -> str:
     if framework == "django":
         from repro.datasets.swtbench import django_label
 
+        path, _, rest = test_id.partition("::")
+        if rest and not all(re.fullmatch(r"\w+", p) for p in rest.split("::")):
+            return django_label(path)  # a docstring-named test: run its module
         return django_label(test_id)
     return test_id.split("::", 1)[0]
 
@@ -79,6 +82,15 @@ def _id_for_name(framework: str, name: str, test_ids: list[str],
 
         tid = django_id(name)
         if tid is None:
+            # A docstring-named test: match a requested id, or a requested file whose
+            # source contains the docstring.
+            raw = name.strip()
+            for t in test_ids:
+                if t.endswith("::" + raw):
+                    return t
+            for path in sorted(files):
+                if raw and raw in (defs or {}).get(path, ""):
+                    return f"{path}::{raw}"
             return None
         return tid if tid in test_ids or tid.split("::")[0] in files else None
     for t in test_ids:  # sympy: names are bare function names
@@ -163,7 +175,7 @@ def run_harness_tests(sandbox: Sandbox, harness: Any, test_ids: list[str], *,
             calls = None
         sandbox.delete_file(trace_rel)
     defs: dict[str, str] = {}
-    if fw == "sympy":
+    if fw in ("sympy", "django"):
         for path in {t.split("::")[0] for t in test_ids}:
             try:
                 defs[path] = sandbox.get_file(path).decode("utf-8", errors="replace")

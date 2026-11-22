@@ -66,12 +66,15 @@ def run_oracle(
         return out(InstanceOutcome.WRONG_TEST, f"unparseable candidate diff: {exc}")
     if not files:
         return out(InstanceOutcome.WRONG_TEST, "candidate diff touches no files")
+    # Also ask for candidate tests that live outside the touched files (a Django test
+    # inherited by a test case in another module, D-M6-14).
+    targets = files + [t for t in candidate.test_ids if t.split("::")[0] not in files]
 
     sb = factory()
     try:
         if not sb.apply_patch(candidate.diff).ok:
             return out(InstanceOutcome.WRONG_TEST, "candidate does not apply to the buggy code")
-        before = run_tests(sb, files, timeout_s=cfg.timeout_s, hash_seed=cfg.seeds[0])
+        before = run_tests(sb, targets, timeout_s=cfg.timeout_s, hash_seed=cfg.seeds[0])
     finally:
         sb.close()
 
@@ -84,7 +87,7 @@ def run_oracle(
                 return out(InstanceOutcome.INFRA_ERROR, f"fix does not apply: {fixed.error}")
             if not sb.apply_patch(candidate.diff).ok:
                 return out(InstanceOutcome.WRONG_TEST, "candidate does not apply on top of the fix")
-            afters.append(run_tests(sb, files, timeout_s=cfg.timeout_s, hash_seed=seed))
+            afters.append(run_tests(sb, targets, timeout_s=cfg.timeout_s, hash_seed=seed))
         finally:
             sb.close()
 
