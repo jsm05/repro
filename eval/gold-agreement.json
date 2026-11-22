@@ -1,15 +1,15 @@
 [
  {
-  "agree": true,
-  "disk_free_gb": 112.2,
+  "agree": false,
+  "disk_free_gb": 115.8,
   "instance_id": "django__django-15127",
   "official": "unresolved",
-  "ours": "WRONG_TEST",
-  "ours_reason": "O1 failed: tests/messages_tests/tests.py::TestLevelTags::test_override_settings_level_tags E\u2192E; O2 failed: tests/messages_tests/base.py E\u2192E, tests/messages_tests/tests.py E\u2192E",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/messages_tests/tests.py::TestLevelTags::test_override_settings_level_tags",
   "pass": false,
-  "seconds": 394,
+  "seconds": 327,
   "transitions": {
-   "tests/messages_tests/tests.py::TestLevelTags::test_override_settings_level_tags": "E\u2192E"
+   "tests/messages_tests/tests.py::TestLevelTags::test_override_settings_level_tags": "F\u2192P"
   }
  },
  {
@@ -18,88 +18,74 @@
   "instance_id": "django__django-16662",
   "official": "unresolved",
   "ours": "WRONG_TEST",
-  "ours_reason": "O2 failed: tests/migrations/test_writer.py E\u2192E",
+  "ours_reason": "no candidate test goes F\u2192P",
   "pass": false,
-  "seconds": 422,
+  "seconds": 457,
   "transitions": {}
  },
  {
   "agree": false,
-  "disk_free_gb": 115.6,
+  "disk_free_gb": 112.0,
   "instance_id": "django__django-16938",
   "official": "resolved",
   "ours": "WRONG_TEST",
-  "ours_reason": "O1 failed: tests/serializers/test_json.py::JsonSerializerTestCase::test_serialize_no_only_pk_with_natural_keys E\u2192E, tests/serializers/test_json.py::JsonSerializerTestCase::test_serialize_only_pk E\u2192E, ",
+  "ours_reason": "O1 failed: tests/serializers/test_jsonl.py::JsonlSerializerTestCase::test_serialize_no_only_pk_with_natural_keys E\u2192E, tests/serializers/test_jsonl.py::JsonlSerializerTestCase::test_serialize_only_pk E",
   "pass": false,
-  "seconds": 334,
+  "seconds": 410,
   "transitions": {
-   "tests/serializers/test_json.py::JsonSerializerTestCase::test_serialize_no_only_pk_with_natural_keys": "E\u2192E",
-   "tests/serializers/test_json.py::JsonSerializerTestCase::test_serialize_only_pk": "E\u2192E",
-   "tests/serializers/test_json.py::JsonSerializerTestCase::test_serialize_prefetch_related_m2m": "E\u2192E",
-   "tests/serializers/test_json.py::JsonSerializerTestCase::test_serialize_progressbar": "E\u2192E",
+   "tests/serializers/test_json.py::JsonSerializerTestCase::test_serialize_no_only_pk_with_natural_keys": "F\u2192P",
+   "tests/serializers/test_json.py::JsonSerializerTestCase::test_serialize_only_pk": "F\u2192P",
+   "tests/serializers/test_json.py::JsonSerializerTestCase::test_serialize_prefetch_related_m2m": "F\u2192P",
+   "tests/serializers/test_json.py::JsonSerializerTestCase::test_serialize_progressbar": "F\u2192P",
    "tests/serializers/test_jsonl.py::JsonlSerializerTestCase::test_serialize_no_only_pk_with_natural_keys": "E\u2192E",
    "tests/serializers/test_jsonl.py::JsonlSerializerTestCase::test_serialize_only_pk": "E\u2192E",
    "tests/serializers/test_jsonl.py::JsonlSerializerTestCase::test_serialize_prefetch_related_m2m": "E\u2192E",
    "tests/serializers/test_jsonl.py::JsonlSerializerTestCase::test_serialize_progressbar": "E\u2192E",
-   "tests/serializers/test_xml.py::XmlSerializerTestCase::test_serialize_no_only_pk_with_natural_keys": "E\u2192E",
-   "tests/serializers/test_xml.py::XmlSerializerTestCase::test_serialize_only_pk": "E\u2192E",
-   "tests/serializers/test_xml.py::XmlSerializerTestCase::test_serialize_prefetch_related_m2m": "E\u2192E",
-   "tests/serializers/test_xml.py::XmlSerializerTestCase::test_serialize_progressbar": "E\u2192E",
-   "tests/serializers/test_yaml.py::YamlSerializerTestCase::test_serialize_no_only_pk_with_natural_keys": "E\u2192E",
-   "tests/serializers/test_yaml.py::YamlSerializerTestCase::test_serialize_only_pk": "E\u2192E",
-   "tests/serializers/test_yaml.py::YamlSerializerTestCase::test_serialize_prefetch_related_m2m": "E\u2192E",
-   "tests/serializers/test_yaml.py::YamlSerializerTestCase::test_serialize_progressbar": "E\u2192E"
-  }
- },
- {
-  "agree": false,
-  "disk_free_gb": 112.5,
-  "instance_id": "sympy__sympy-13647",
-  "official": "resolved",
-  "ours": "WRONG_TEST",
-  "ours_reason": "O1 failed: sympy/matrices/tests/test_commonmatrix.py::test_col_insert E\u2192E; O2 failed: sympy/matrices/tests/test_commonmatrix.py E\u2192E",
-  "pass": false,
-  "seconds": 369,
-  "transitions": {
-   "sympy/matrices/tests/test_commonmatrix.py::test_col_insert": "E\u2192E"
-  }
- },
- {
-  "agree": false,
-  "disk_free_gb": 112.5,
-  "instance_id": "sympy__sympy-23262",
-  "official": "resolved",
-  "ours": "WRONG_TEST",
-  "ours_reason": "O1 failed: sympy/utilities/tests/test_lambdify.py::test_issue_14941 E\u2192E; O2 failed: sympy/utilities/tests/test_lambdify.py E\u2192E",
-  "pass": false,
-  "seconds": 411,
-  "transitions": {
-   "sympy/utilities/tests/test_lambdify.py::test_issue_14941": "E\u2192E"
-  }
- },
- {
-  "agree": false,
-  "disk_free_gb": 105.9,
-  "instance_id": "matplotlib__matplotlib-24570",
-  "official": "resolved",
-  "ours": "WRONG_TEST",
-  "ours_reason": "O2 failed: lib/matplotlib/tests/test_offsetbox.py::test_anchoredtext_horizontal_alignment[png] F\u2192F, lib/matplotlib/tests/test_offsetbox.py::test_annotationbbox_extents F\u2192F, lib/matplotlib/tests/test_o",
-  "pass": false,
-  "seconds": 2587,
-  "transitions": {
-   "lib/matplotlib/tests/test_offsetbox.py::test_packers[bottom]": "F\u2192P",
-   "lib/matplotlib/tests/test_offsetbox.py::test_packers[top]": "F\u2192P"
+   "tests/serializers/test_xml.py::XmlSerializerTestCase::test_serialize_no_only_pk_with_natural_keys": "E\u2192P",
+   "tests/serializers/test_xml.py::XmlSerializerTestCase::test_serialize_only_pk": "E\u2192P",
+   "tests/serializers/test_xml.py::XmlSerializerTestCase::test_serialize_prefetch_related_m2m": "E\u2192P",
+   "tests/serializers/test_xml.py::XmlSerializerTestCase::test_serialize_progressbar": "E\u2192P",
+   "tests/serializers/test_yaml.py::YamlSerializerTestCase::test_serialize_no_only_pk_with_natural_keys": "E\u2192P",
+   "tests/serializers/test_yaml.py::YamlSerializerTestCase::test_serialize_only_pk": "E\u2192P",
+   "tests/serializers/test_yaml.py::YamlSerializerTestCase::test_serialize_prefetch_related_m2m": "E\u2192P",
+   "tests/serializers/test_yaml.py::YamlSerializerTestCase::test_serialize_progressbar": "F\u2192P"
   }
  },
  {
   "agree": true,
-  "disk_free_gb": 114.9,
+  "disk_free_gb": 116.2,
+  "instance_id": "sympy__sympy-13647",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: sympy/matrices/tests/test_commonmatrix.py::test_col_insert",
+  "pass": true,
+  "seconds": 348,
+  "transitions": {
+   "sympy/matrices/tests/test_commonmatrix.py::test_col_insert": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.5,
+  "instance_id": "sympy__sympy-23262",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: sympy/utilities/tests/test_lambdify.py::test_issue_14941",
+  "pass": true,
+  "seconds": 392,
+  "transitions": {
+   "sympy/utilities/tests/test_lambdify.py::test_issue_14941": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 111.2,
   "instance_id": "scikit-learn__scikit-learn-10844",
   "official": "resolved",
   "ours": "REPRODUCED",
   "ours_reason": "F\u2192P: sklearn/metrics/cluster/tests/test_supervised.py::test_int_overflow_mutual_info_fowlkes_mallows_score",
   "pass": true,
-  "seconds": 650,
+  "seconds": 557,
   "transitions": {
    "sklearn/metrics/cluster/tests/test_supervised.py::test_int_overflow_mutual_info_fowlkes_mallows_score": "F\u2192P"
   }
@@ -112,7 +98,7 @@
   "ours": "REPRODUCED",
   "ours_reason": "F\u2192P: testing/logging/test_fixture.py::test_clear_for_call_stage",
   "pass": true,
-  "seconds": 347,
+  "seconds": 367,
   "transitions": {
    "testing/logging/test_fixture.py::test_clear_for_call_stage": "F\u2192P"
   }
@@ -125,23 +111,31 @@
   "ours": "REPRODUCED",
   "ours_reason": "F\u2192P: xarray/tests/test_merge.py::TestMergeMethod::test_merge_dataarray",
   "pass": true,
-  "seconds": 1369,
+  "seconds": 1252,
   "transitions": {
    "xarray/tests/test_merge.py::TestMergeMethod::test_merge_dataarray": "F\u2192P"
   }
  },
  {
-  "agree": false,
+  "agree": true,
   "disk_free_gb": 112.5,
   "instance_id": "psf__requests-6028",
   "official": "resolved",
-  "ours": "WRONG_TEST",
-  "ours_reason": "O2 failed: tests/test_utils.py::test_should_bypass_proxies_pass_only_hostname[http://172.16.1.1/-172.16.1.1] E\u2192E, tests/test_utils.py::test_should_bypass_proxies_pass_only_hostname[http://172.16.1.1:5",
-  "pass": false,
-  "seconds": 301,
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/test_utils.py::test_prepend_scheme_if_needed[http://user:pass@example.com/path?query-http://user:pass@example.com/path?query], tests/test_utils.py::test_prepend_scheme_if_needed[http://user",
+  "pass": true,
+  "seconds": 371,
   "transitions": {
    "tests/test_utils.py::test_prepend_scheme_if_needed[http://user:pass@example.com/path?query-http://user:pass@example.com/path?query]": "F\u2192P",
    "tests/test_utils.py::test_prepend_scheme_if_needed[http://user@example.com/path?query-http://user@example.com/path?query]": "F\u2192P"
   }
+ },
+ {
+  "agree": false,
+  "error": "no result from its job",
+  "instance_id": "matplotlib__matplotlib-24570",
+  "official": "not run",
+  "ours": "not run",
+  "seconds": 0
  }
 ]
