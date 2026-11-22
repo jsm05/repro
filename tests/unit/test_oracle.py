@@ -130,3 +130,47 @@ def test_pass_after_needs_three_of_three(fixture_source: FixtureSource) -> None:
     assert v.outcome == "WRONG_TEST"
     assert v.flaky_tests == ids(name)
     assert v.transitions[ids(name)[0]].label == "F→~"
+
+
+def _with_existing_test(fixture_source: FixtureSource, tmp_path: Path, body: str):  # type: ignore[no-untyped-def]
+    """Adds an existing test to tests/test_pages.py, then a candidate appended after it."""
+    fx = fixture_source.load("f01_off_by_one")
+    repo = tmp_path / "repo"
+    shutil.copytree(fx.repo_dir, repo)
+    pages_test = repo / "tests" / "test_pages.py"
+    pages_test.write_text("import os\n" + pages_test.read_text()
+                          + "\n\ndef test_existing():\n" + body + "\n")
+    last = body.splitlines()[-1]
+    old_lines = pages_test.read_text().count("\n")
+    append = (
+        "diff --git a/tests/test_pages.py b/tests/test_pages.py\n"
+        "--- a/tests/test_pages.py\n+++ b/tests/test_pages.py\n"
+        f"@@ -{old_lines},1 +{old_lines},5 @@\n"
+        f" {last}\n"
+        "+\n+\n+def test_full_page():\n+    assert paginate([1, 2, 3, 4, 5], 0, 2) == [1, 2]\n"
+    )
+    cand = Candidate(diff=append, test_ids=["tests/test_pages.py::test_full_page"])
+    return run_oracle(cand, fx.instance.sealed.gold_fix_patch, local_factory(repo), CFG)
+
+
+def test_flaky_neighbour_is_listed_not_collateral(fixture_source: FixtureSource,
+                                                  tmp_path: Path) -> None:
+    """D-M6-20: an existing test that passed before and fails in only some after-fix runs
+    is flaky, not broken by the fix. It's listed as flaky and doesn't fail O2."""
+    v = _with_existing_test(fixture_source, tmp_path,
+                            '    assert os.environ.get("PYTHONHASHSEED") != "2"')
+    t = "tests/test_pages.py::test_existing"
+    assert v.transitions[t].label == "P→~"
+    assert v.o2_no_collateral
+    assert t in v.flaky_tests
+    assert v.outcome == "REPRODUCED"
+
+
+def test_neighbour_failing_every_after_run_is_collateral(fixture_source: FixtureSource,
+                                                         tmp_path: Path) -> None:
+    """D-M6-20: failing in all after-fix runs is still collateral."""
+    v = _with_existing_test(fixture_source, tmp_path,
+                            "    assert paginate([1, 2, 3], 0, 2) == [1]")
+    assert v.transitions["tests/test_pages.py::test_existing"].label == "P→F"
+    assert not v.o2_no_collateral
+    assert v.outcome == "WRONG_TEST"
