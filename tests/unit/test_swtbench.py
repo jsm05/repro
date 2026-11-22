@@ -491,3 +491,28 @@ def test_django_line_parse_beats_the_greedy_harness_regex() -> None:
     # The harness's own parser loses at least one of these; that's the bug being covered.
     theirs = swt.log_parser("django/django")(log)
     assert set(theirs) != set(ours) or any(theirs[k] != ours[k] for k in theirs)
+
+
+@needs_swt
+def test_harness_run_reads_the_whole_log_not_the_capped_exec_output(tmp_path: Path) -> None:
+    """D-M6-18: exec output is capped at 16 KB with the middle cut, so a long Django run
+    lost the results in the middle. The runner reads the full log from a file instead."""
+    from types import SimpleNamespace
+
+    from repro.runner.harness_runner import run_harness_tests
+    from repro.sandbox.local import LocalSandbox
+
+    src = tmp_path / "src"
+    (src / "tests" / "app").mkdir(parents=True)
+    (src / "tests" / "app" / "test_big.py").write_text("class C:\n    pass\n")
+    script = ("import sys\n"
+              "for i in range(600):\n"
+              "    print(f'test_{i:04d} (app.test_big.C.test_{i:04d}) ... ok', file=sys.stderr)\n")
+    (src / "run.py").write_text(script)
+    harness = SimpleNamespace(framework="django", repo="django/django",
+                              test_cmd="python3 run.py")
+    with LocalSandbox(src) as sb:
+        res = run_harness_tests(sb, harness, ["tests/app/test_big.py"], timeout_s=60,
+                                hash_seed=0, trace=False)
+    assert len(res.outcomes) == 600
+    assert res.outcomes["tests/app/test_big.py::C::test_0300"].status is TestStatus.PASSED
