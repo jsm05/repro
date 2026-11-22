@@ -447,3 +447,22 @@ def test_docstring_in_unchanged_lines_maps_to_the_test_file() -> None:
     assert inst.sealed.fail_to_pass == [
         "tests/auth_tests/test_validators.py::An existing test's docstring."]
     assert unmapped == []
+
+
+@needs_swt
+def test_docstring_statuses_from_the_line_after_the_name() -> None:
+    """D-M6-16: Django prints a docstring on the line after the name; both get the status."""
+    from repro.runner.harness_runner import django_docstring_statuses, parse_harness_run
+
+    log = ("test_sorted_imports (migrations.test_writer.WriterTests.test_sorted_imports)\n"
+           "#24155 - Tests ordering of imports. ... FAIL\n"
+           "test_simple (migrations.test_writer.WriterTests.test_simple) ... ok\n")
+    st = django_docstring_statuses(log)
+    assert st == {"test_sorted_imports (migrations.test_writer.WriterTests.test_sorted_imports)":
+                  "FAILED", "#24155 - Tests ordering of imports.": "FAILED"}
+    raw = "tests/migrations/test_writer.py::#24155 - Tests ordering of imports."
+    out = parse_harness_run("django", st, log, ["tests/migrations/test_writer.py", raw],
+                            "/testbed", None, {})
+    assert out[raw].status is TestStatus.FAILED
+    assert out["tests/migrations/test_writer.py::WriterTests::test_sorted_imports"].status \
+        is TestStatus.FAILED
