@@ -34,6 +34,30 @@ from repro.oracle.oracle import run_oracle  # noqa: E402
 from repro.sandbox.docker import reap  # noqa: E402
 
 DATASET = "princeton-nlp/SWE-bench_Verified"
+EXCEPTIONS = Path(__file__).resolve().parent.parent / "eval" / "gold-exceptions.yaml"
+
+
+def load_exceptions(path: Path = EXCEPTIONS) -> dict[str, dict[str, str]]:
+    """Explained exceptions: instance id -> {official, reason, evidence} (D-M6-19)."""
+    import yaml
+
+    if not path.exists():
+        return {}
+    data = yaml.safe_load(path.read_text()) or {}
+    return {str(k): {f: str(v.get(f, "")) for f in ("official", "reason", "evidence")}
+            for k, v in data.items()}
+
+
+def judge(row: dict[str, Any], exceptions: dict[str, dict[str, str]]) -> None:
+    """Sets row["pass"] and row["exception"]. Pass: gold F→P in our oracle, and the
+    official harness resolved it, could not score it, or gave exactly the verdict an
+    explained exception covers."""
+    ours_ok = row["ours"] == InstanceOutcome.REPRODUCED.value
+    official = str(row["official"])
+    exc = exceptions.get(row["instance_id"])
+    row["exception"] = bool(ours_ok and exc and official == exc["official"])
+    row["pass"] = ours_ok and (official == "resolved" or official.startswith("no result")
+                               or row["exception"])
 
 
 def find_resolution(obj: Any, instance: str, key: str = "") -> str | None:
@@ -74,15 +98,20 @@ def official(instance_id: str, run_id: str) -> str:
     return f"no result (exit {proc.returncode})"
 
 
-def write_report(rows: list[dict[str, Any]], out: Path, total: int) -> int:
-    """Writes the report; returns how many instances passed: gold F→P in our oracle and
-    the official harness resolved it (or could not score it, which is listed)."""
+def write_report(rows: list[dict[str, Any]], out: Path, total: int,
+                 exceptions: dict[str, dict[str, str]] | None = None) -> int:
+    """Writes the report; returns how many instances passed (see `judge`)."""
+    exceptions = load_exceptions() if exceptions is None else exceptions
+    for r in rows:
+        judge(r, exceptions)
     agree = sum(1 for r in rows if r["agree"])
     passed = sum(1 for r in rows if r.get("pass"))
+    explained = [r for r in rows if r.get("exception")]
     unscored = [r["instance_id"] for r in rows if str(r["official"]).startswith("no result")]
     lines = ["# Gold agreement on the pilot (T6.D8)", "",
-             f"Gold tests F→P in our oracle and resolved by the official SWT-bench harness: "
-             f"{passed} of {total}. Verdicts agree on {agree} of {len(rows)} "
+             f"Gold tests F→P in our oracle and the official SWT-bench harness agrees: "
+             f"{passed} of {total} ({passed - len(explained)} outright, {len(explained)} "
+             f"as explained exceptions below). Raw verdicts match on {agree} of {len(rows)} "
              f"({len(rows)} of {total} instances done).", "",
              *([f"Not scored by the official harness: {', '.join(unscored)}", ""]
                if unscored else []),
@@ -93,8 +122,17 @@ def write_report(rows: list[dict[str, Any]], out: Path, total: int) -> int:
                           sorted(r.get("transitions", {}).items()))
         note = (r.get("error") or ("" if r["ours"] == "REPRODUCED" else r.get("ours_reason", "")))
         lines.append(f"| `{r['instance_id']}` | {r['ours']} | {r['official'][:40]} | "
-                     f"{'yes' if r['agree'] else 'NO'} | {trans} | {r['seconds']} | "
+                     f"{'yes' if r['agree'] else 'explained' if r.get('exception') else 'NO'}"
+                     f" | {trans} | {r['seconds']} | "
                      f"{str(note).replace('|', '/')[:160]} |")
+    if explained:
+        lines += ["", "## Explained exceptions", "",
+                  "Our oracle shows the gold tests F→P; the official harness disagrees only "
+                  "because of how it read its own log. Listed in `eval/gold-exceptions.yaml`.", ""]
+        for r in explained:
+            e = exceptions[r["instance_id"]]
+            lines += [f"**`{r['instance_id']}`** (official: {e['official']})", "",
+                      f"- Why: {e['reason']}", f"- Evidence: {e['evidence']}", ""]
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines) + "\n")
     out.with_suffix(".json").write_text(json.dumps(rows, indent=1, sort_keys=True) + "\n")
@@ -181,10 +219,7 @@ def main() -> int:
             reap("gold-agreement")
         ours_ok = row["ours"] == InstanceOutcome.REPRODUCED.value
         row["agree"] = ours_ok == (row["official"] == "resolved")
-        # Pass: gold F→P in our oracle, and the official harness agrees or could not
-        # score it (listed in the report).
-        row["pass"] = ours_ok and (row["official"] == "resolved"
-                                   or str(row["official"]).startswith("no result"))
+        judge(row, load_exceptions())
         row["seconds"] = round(time.monotonic() - t0)
         rows.append(row)
         print(json.dumps(row), flush=True)

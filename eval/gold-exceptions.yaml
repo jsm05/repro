@@ -1,0 +1,28 @@
+# Explained exceptions for gold agreement (T6.D8, D-M6-19).
+# An entry counts only while our oracle says REPRODUCED and the official harness still
+# gives exactly the verdict recorded here. If either changes, the entry stops applying.
+
+django__django-15127:
+  official: unresolved
+  reason: >-
+    The official harness's Django parser read a pip install line as a test. Its base run
+    lists a PASS_TO_FAIL "test" named
+    "testbed/lib/python3.9/site-packages (from Django==4.1.dev20211125193604)", and that
+    alone marks the instance unresolved. The gold test itself goes F→P in its own report.
+  evidence: >-
+    run_instance_swt_logs/gold-django__django-15127/gold/django__django-15127/report.json:
+    tests_base.PASS_TO_FAIL is the pip line; tests_pred.FAIL_TO_PASS has
+    test_override_settings_level_tags (messages_tests.tests.TestLevelTags).
+
+django__django-16662:
+  official: unresolved
+  reason: >-
+    The gold test has a docstring, so Django prints its result on the line after its name
+    ("#24155 - Tests ordering of imports. ... ok"). The official parser only reads
+    names that start with "test", drops that line, and ends up with an empty
+    FAIL_TO_PASS. Repro reads those pairs (D-M6-16).
+  evidence: >-
+    run_instance_swt_logs/gold-django__django-16662/pred_post__gold/django__django-16662/test_output.txt
+    shows "test_sorted_imports (migrations.test_writer.WriterTests.test_sorted_imports)"
+    then "#24155 - Tests ordering of imports. ... ok"; report.json has no FAIL_TO_PASS
+    entry for it.
