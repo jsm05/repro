@@ -109,8 +109,14 @@ def to_test_id(framework: str, name: str, test_patch: str) -> str | None:
         # Django prints a docstring's first line instead of the name when a test has one,
         # and SWE-bench keeps that ("#24155 - Tests ordering of imports."). Keep it as is,
         # tied to the test file whose added lines contain it (D-M6-14).
-        for path, added in test_files(test_patch).items():
+        files = test_files(test_patch)
+        for path, added in files.items():
             if name.strip() and name.strip() in added:
+                return f"{path}::{name.strip()}"
+        # The docstring may be in unchanged lines: tie it to the first test file; the
+        # runner matches it by its text in the log and the file's source.
+        for path in files:
+            if name.strip():
                 return f"{path}::{name.strip()}"
         return None
     if framework == "sympy":

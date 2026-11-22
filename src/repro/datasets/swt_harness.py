@@ -92,15 +92,32 @@ def directives(repo: str, test_files: Sequence[str]) -> list[str]:
 
 
 def image_keys(records: Sequence[dict[str, Any]], build: bool = False,
-               timeout_s: float = 7200) -> dict[str, dict[str, str]]:
+               timeout_s: float = 5400) -> dict[str, dict[str, str]]:
     """Ask the harness for each instance's image names, building them if asked."""
     driver = resources.files("repro.datasets").joinpath("_swt_driver.py")
     payload = json.dumps({"records": list(records), "build": build})
-    proc = subprocess.run([sys.executable, str(driver)], input=payload, text=True,
-                          capture_output=True, cwd=swt_root(), timeout=timeout_s, check=False)
+    try:
+        proc = subprocess.run([sys.executable, str(driver)], input=payload, text=True,
+                              capture_output=True, cwd=swt_root(), timeout=timeout_s,
+                              check=False)
+    except subprocess.TimeoutExpired:
+        print_build_logs()
+        raise
     for line in proc.stdout.splitlines():
         if line.startswith("REPRO_JSON "):
             result: dict[str, dict[str, str]] = json.loads(line[len("REPRO_JSON "):])
             return result
+    print_build_logs()
     raise RuntimeError(f"SWT-bench image step failed (exit {proc.returncode}): "
                        f"{(proc.stderr or proc.stdout)[-2000:]}")
+
+
+def print_build_logs(lines: int = 60) -> None:
+    """Show the tails of the harness's image build logs (they go to files, not stdout)."""
+    root = swt_root() / "image_build_logs"
+    if not root.is_dir():
+        return
+    for log in sorted(root.rglob("*.log"), key=lambda p: p.stat().st_mtime)[-3:]:
+        tail = log.read_text(errors="replace").splitlines()[-lines:]
+        print(f"--- {log} (last {lines} lines) ---", *tail, sep="\n", file=sys.stderr,
+              flush=True)

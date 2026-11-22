@@ -88,6 +88,7 @@ jobs:
           REPRO_PILOT_RECORDS: /tmp/pilot_records.jsonl
           REPRO_PILOT_ONLY: ${{ matrix.instance }}
           REPRO_GOLD_OUT: /tmp/gold/gold-${{ matrix.instance }}.md
+          REPRO_HARNESS_DEBUG: "1"
         run: pytest -m docker tests/docker -k gold -v -s
       - name: Upload this instance's result
         if: always()

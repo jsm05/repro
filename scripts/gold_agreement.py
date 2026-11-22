@@ -57,6 +57,10 @@ def official(instance_id: str, run_id: str) -> str:
         cwd=root, capture_output=True, text=True, timeout=1500, check=False)
     print("official harness output (tail):", proc.stdout[-3000:], proc.stderr[-2000:],
           sep="\n", flush=True)
+    logs = root / "run_instance_swt_logs" / run_id
+    for f in sorted(logs.rglob("report.json")) + sorted(logs.rglob("test_output.txt")):
+        text = f.read_text(errors="replace")
+        print(f"--- {f.relative_to(root)} ---", text[-2500:], sep="\n", flush=True)
     candidates = [p for p in root.rglob("*.json") if run_id in str(p)]
     if not candidates and (root / "evaluation_results").is_dir():
         candidates = sorted((root / "evaluation_results").rglob("*.json"))

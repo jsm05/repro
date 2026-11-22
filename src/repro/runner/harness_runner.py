@@ -182,7 +182,11 @@ def run_harness_tests(sandbox: Sandbox, harness: Any, test_ids: list[str], *,
             except (FileNotFoundError, OSError):
                 defs[path] = ""
     outcomes = parse_harness_run(fw, statuses, log, list(test_ids), workdir, calls, defs)
-    if any(o.note == "not in test log" for o in outcomes.values()) or not outcomes:
+    if os.environ.get("REPRO_HARNESS_DEBUG"):
+        logging.getLogger(__name__).warning(
+            "harness run: cmd=%s exit=%s outcomes=%s\n--- log tail ---\n%s", cmd,
+            result.exit_code, {t: o.status.value for t, o in outcomes.items()}, log[-3000:])
+    elif any(o.note == "not in test log" for o in outcomes.values()) or not outcomes:
         log_ = logging.getLogger(__name__)
         log_.warning("harness run: %d requested test(s) missing from the log; cmd=%s exit=%s\n"
                      "--- log head ---\n%s\n--- log tail ---\n%s", sum(
