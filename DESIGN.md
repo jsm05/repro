@@ -210,7 +210,7 @@ Failure signature = (exception type, message with numbers, addresses and paths m
 | Check | Rule |
 |---|---|
 | O1 Pass after | Fresh checkout, apply fix, apply candidate. New tests pass in 3 of 3 runs. |
-| O2 No collateral | No test in the touched files fails after the fix. This mirrors the SWT-bench success definition. |
+| O2 No collateral | No test in the touched files that passed on the buggy code fails in every after-fix run. This mirrors the SWT-bench success definition. Tests already failing before the fix aren't counted (D-M6-13); one failing in only some after-fix runs is listed as flaky, not counted (D-M6-20). |
 
 Per-test transitions are recorded (F→P, F→F, P→P, P→F, E→x). An instance is REPRODUCED when there is at least one F→P and no x→F.
 

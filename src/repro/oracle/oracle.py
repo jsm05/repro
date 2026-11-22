@@ -2,8 +2,9 @@
 
 O1 pass after: on a fresh checkout with the fix applied, every candidate test passes
    in all runs (3 of 3 by default).
-O2 no collateral: no test in the files the candidate touches fails after the fix.
-   This mirrors the SWT-bench success definition.
+O2 no collateral: no test in the files the candidate touches that passed on the buggy
+   code fails in every after-fix run. This mirrors the SWT-bench success definition. One
+   that fails in only some runs is flaky, listed in `flaky_tests`, not collateral.
 
 An instance is REPRODUCED when O1 and O2 hold and at least one candidate test goes
 FAILED before the fix to PASSED after it (F→P).
@@ -116,13 +117,15 @@ def run_oracle(
     flaky = [t for t in cand if len(set(transitions[t].after)) > 1]
     o1 = all(all(s is TestStatus.PASSED for s in transitions[t].after) for t in cand)
     # Collateral: another test in the touched files that passed on the buggy code and
-    # fails once the fix is in (P→F). Tests that already fail before (F→F, often the
-    # environment) are not the candidate's doing (D-M6-13).
-    collateral = [
-        t for t, tr in transitions.items()
-        if t not in cand and tr.before is TestStatus.PASSED
-        and any(s in BAD_AFTER for s in tr.after)
-    ]
+    # fails in every run once the fix is in (P→F). Tests that already fail before (F→F,
+    # often the environment) are not the candidate's doing (D-M6-13). One that fails in
+    # only some after-fix runs (P→~) is flaky, not broken by the fix: it's listed, and
+    # doesn't fail O2 (D-M6-20).
+    others = {t: tr for t, tr in transitions.items()
+              if t not in cand and tr.before is TestStatus.PASSED}
+    collateral = [t for t, tr in others.items() if all(s in BAD_AFTER for s in tr.after)]
+    flaky += [t for t, tr in others.items()
+              if t not in collateral and any(s in BAD_AFTER for s in tr.after)]
     o2 = not collateral
     f2p = [t for t in cand if transitions[t].label == "F→P"]
     if o1 and o2 and f2p:
