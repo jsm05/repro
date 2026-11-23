@@ -287,10 +287,10 @@ gh run watch --repo jsm05/repro
 ```
 
 **Done when**
-- [ ] Sandbox contract tests pass on `DockerSandbox` (same tests as `LocalSandbox`, plus network, memory, PID, cleanup tests)
-- [ ] For 10 pilot instances the gold tests are F→P in my oracle, and the official harness agrees on all 10 (or the ones it could build, with the rest listed)
-- [ ] `.git` inside the sandbox has exactly one commit; a network call from inside fails
-- [ ] No containers left after a killed run; disk is reclaimed between instances
+- [x] Sandbox contract tests pass on `DockerSandbox` (same tests as `LocalSandbox`, plus network, memory, PID, cleanup tests) (T6.D1 to D4, D7; docker-tests run 45063397844)
+- [x] For 10 pilot instances the gold tests are F→P in my oracle, and the official harness agrees on all 10 (or the ones it could build, with the rest listed) (T6.D8; docker-tests run 45063397844: 10 of 10, 8 outright and 2 explained exceptions in `eval/gold-agreement.md`, D-M6-19)
+- [x] `.git` inside the sandbox has exactly one commit; a network call from inside fails (T6.D6, T6.D2; docker-tests run 45063397844)
+- [x] No containers left after a killed run; disk is reclaimed between instances (T6.D7; `SWTBenchDataset.release` logs free disk after each instance, about 106 GB after matplotlib in the gold run)
 - [x] A static check confirms no workflow uses `pull_request_target` and secrets appear only in steps that need them (T6.10)
 
 **Explain it:** What does each Docker flag defend against? What is the threat model and where does it stop? How could the fix leak into the agent's view, and what blocks each path? Why can't a fork's pull request read the API keys?
