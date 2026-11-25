@@ -1,0 +1,218 @@
+[
+ {
+  "agree": true,
+  "disk_free_gb": 112.2,
+  "exception": false,
+  "instance_id": "django__django-16032",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/annotations/tests.py::NonAggregateAnnotationTestCase::test_annotation_and_alias_filter_in_subquery, tests/annotations/tests.py::NonAggregateAnnotationTestCase::test_annotation_and_alias_fil",
+  "pass": true,
+  "seconds": 354,
+  "transitions": {
+   "tests/annotations/tests.py::NonAggregateAnnotationTestCase::test_annotation_and_alias_filter_in_subquery": "F\u2192P",
+   "tests/annotations/tests.py::NonAggregateAnnotationTestCase::test_annotation_and_alias_filter_related_in_subquery": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.4,
+  "exception": false,
+  "instance_id": "django__django-12273",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/model_inheritance_regress/tests.py::ModelInheritanceTest::test_create_new_instance_with_pk_equals_none, tests/model_inheritance_regress/tests.py::ModelInheritanceTest::test_create_new_insta",
+  "pass": true,
+  "seconds": 439,
+  "transitions": {
+   "tests/model_inheritance_regress/tests.py::ModelInheritanceTest::test_create_new_instance_with_pk_equals_none": "F\u2192P",
+   "tests/model_inheritance_regress/tests.py::ModelInheritanceTest::test_create_new_instance_with_pk_equals_none_multi_inheritance": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.4,
+  "exception": false,
+  "instance_id": "django__django-13343",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/file_storage/tests.py::FieldCallableFileStorageTests::test_deconstruction",
+  "pass": true,
+  "seconds": 521,
+  "transitions": {
+   "tests/file_storage/tests.py::FieldCallableFileStorageTests::test_deconstruction": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 115.8,
+  "exception": false,
+  "instance_id": "django__django-15629",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/migrations/test_operations.py::AlterField operation of db_collation on primary keys changes any FKs, tests/migrations/test_operations.py::Creation of models with a FK to a PK with db_collat",
+  "pass": true,
+  "seconds": 360,
+  "transitions": {
+   "tests/migrations/test_operations.py::AlterField operation of db_collation on primary keys changes any FKs": "F\u2192P",
+   "tests/migrations/test_operations.py::Creation of models with a FK to a PK with db_collation.": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.5,
+  "exception": false,
+  "instance_id": "sympy__sympy-17318",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: sympy/simplify/tests/test_sqrtdenest.py::test_issue_12420",
+  "pass": true,
+  "seconds": 522,
+  "transitions": {
+   "sympy/simplify/tests/test_sqrtdenest.py::test_issue_12420": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.0,
+  "exception": false,
+  "instance_id": "django__django-16801",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/model_fields/test_imagefield.py::ImageFieldNoDimensionsTests::test_post_init_not_connected",
+  "pass": true,
+  "seconds": 433,
+  "transitions": {
+   "tests/model_fields/test_imagefield.py::ImageFieldNoDimensionsTests::test_post_init_not_connected": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.4,
+  "exception": false,
+  "instance_id": "django__django-12965",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/delete/tests.py::FastDeleteTests::test_fast_delete_all",
+  "pass": true,
+  "seconds": 443,
+  "transitions": {
+   "tests/delete/tests.py::FastDeleteTests::test_fast_delete_all": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 106.2,
+  "exception": false,
+  "instance_id": "matplotlib__matplotlib-23476",
+  "official": "unresolved",
+  "ours": "WRONG_TEST",
+  "ours_reason": "O1 failed: lib/matplotlib/tests/test_figure.py::test_unpickle_with_device_pixel_ratio F\u2192F",
+  "pass": false,
+  "seconds": 1425,
+  "transitions": {
+   "lib/matplotlib/tests/test_figure.py::test_unpickle_with_device_pixel_ratio": "F\u2192F"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 111.2,
+  "exception": false,
+  "instance_id": "scikit-learn__scikit-learn-10297",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: sklearn/linear_model/tests/test_ridge.py::test_ridge_classifier_cv_store_cv_values",
+  "pass": true,
+  "seconds": 751,
+  "transitions": {
+   "sklearn/linear_model/tests/test_ridge.py::test_ridge_classifier_cv_store_cv_values": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.5,
+  "exception": false,
+  "instance_id": "sphinx-doc__sphinx-8721",
+  "official": "unresolved",
+  "ours": "WRONG_TEST",
+  "ours_reason": "O1 failed: tests/test_ext_viewcode.py::test_viewcode_epub_default E\u2192E",
+  "pass": false,
+  "seconds": 461,
+  "transitions": {
+   "tests/test_ext_viewcode.py::test_viewcode_epub_default": "E\u2192E"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.5,
+  "exception": false,
+  "instance_id": "sympy__sympy-17139",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: sympy/simplify/tests/test_fu.py::test__TR56, sympy/simplify/tests/test_simplify.py::test_issue_17137",
+  "pass": true,
+  "seconds": 951,
+  "transitions": {
+   "sympy/simplify/tests/test_fu.py::test__TR56": "F\u2192P",
+   "sympy/simplify/tests/test_simplify.py::test_issue_17137": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.5,
+  "exception": false,
+  "instance_id": "sympy__sympy-15976",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: sympy/printing/tests/test_mathml.py::test_presentation_symbol",
+  "pass": true,
+  "seconds": 375,
+  "transitions": {
+   "sympy/printing/tests/test_mathml.py::test_presentation_symbol": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 108.9,
+  "exception": false,
+  "instance_id": "pydata__xarray-3151",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: xarray/tests/test_combine.py::TestCombineAuto::test_combine_leaving_bystander_dimensions",
+  "pass": true,
+  "seconds": 1116,
+  "transitions": {
+   "xarray/tests/test_combine.py::TestCombineAuto::test_combine_leaving_bystander_dimensions": "F\u2192P"
+  }
+ },
+ {
+  "agree": false,
+  "disk_free_gb": 112.2,
+  "exception": false,
+  "instance_id": "django__django-14771",
+  "official": "unresolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/utils_tests/test_autoreload.py::TestChildArguments::test_xoptions",
+  "pass": false,
+  "seconds": 439,
+  "transitions": {
+   "tests/utils_tests/test_autoreload.py::TestChildArguments::test_xoptions": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.3,
+  "exception": false,
+  "instance_id": "astropy__astropy-14369",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: astropy/units/tests/test_format.py::test_cds_grammar[strings4-unit4], astropy/units/tests/test_format.py::test_cds_grammar[strings6-unit6], astropy/units/tests/test_format.py::test_cds_grammar_fa",
+  "pass": true,
+  "seconds": 537,
+  "transitions": {
+   "astropy/units/tests/test_format.py::test_cds_grammar[strings4-unit4]": "F\u2192P",
+   "astropy/units/tests/test_format.py::test_cds_grammar[strings6-unit6]": "F\u2192P",
+   "astropy/units/tests/test_format.py::test_cds_grammar_fail[km/s.Mpc-1]": "F\u2192P"
+  }
+ }
+]
