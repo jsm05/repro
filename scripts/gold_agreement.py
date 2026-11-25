@@ -71,6 +71,34 @@ def find_resolution(obj: Any, instance: str, key: str = "") -> str | None:
     return None
 
 
+def summarize_report(text: str, cap: int = 15) -> str:
+    """The parts of an official report.json that explain its verdict: every scalar, and
+    every list except PASS_TO_PASS (often hundreds of names), each capped at `cap`.
+    A plain tail cut off the start of the report, which is where the verdict comes from."""
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        return text[-2500:]
+    out: list[str] = []
+
+    def walk(obj: Any, path: str) -> None:
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                walk(v, f"{path}.{k}" if path else str(k))
+        elif isinstance(obj, list):
+            if path.endswith("PASS_TO_PASS") and not path.endswith("FAIL_TO_PASS"):
+                out.append(f"{path}: {len(obj)} tests")
+                return
+            shown = [str(x)[:160] for x in obj[:cap]]
+            more = f" (+{len(obj) - cap} more)" if len(obj) > cap else ""
+            out.append(f"{path}: {len(obj)}{more} {shown}")
+        else:
+            out.append(f"{path}: {obj}")
+
+    walk(data, "")
+    return "\n".join(out)
+
+
 def official(instance_id: str, run_id: str) -> str:
     root = swt_root()
     proc = subprocess.run(
@@ -82,7 +110,10 @@ def official(instance_id: str, run_id: str) -> str:
     print("official harness output (tail):", proc.stdout[-3000:], proc.stderr[-2000:],
           sep="\n", flush=True)
     logs = root / "run_instance_swt_logs" / run_id
-    for f in sorted(logs.rglob("report.json")) + sorted(logs.rglob("test_output.txt")):
+    for f in sorted(logs.rglob("report.json")):
+        print(f"--- {f.relative_to(root)} (summary) ---", summarize_report(f.read_text()),
+              sep="\n", flush=True)
+    for f in sorted(logs.rglob("test_output.txt")):
         text = f.read_text(errors="replace")
         print(f"--- {f.relative_to(root)} ---", text[-2500:], sep="\n", flush=True)
     candidates = [p for p in root.rglob("*.json") if run_id in str(p)]

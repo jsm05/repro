@@ -56,3 +56,17 @@ def test_the_checked_in_exceptions_file_loads() -> None:
     assert set(exc) == {"django__django-15127", "django__django-16662"}
     for e in exc.values():
         assert e["official"] and e["reason"] and e["evidence"]
+
+
+def test_report_summary_keeps_the_verdict_and_drops_pass_to_pass() -> None:
+    """The official report is summarised so the parts that decide the verdict survive."""
+    import json
+
+    g = _script()
+    rep = {"i": {"resolved": False, "tests_base": {
+        "FAIL_TO_PASS": [], "PASS_TO_PASS": [f"t{i}" for i in range(500)],
+        "PASS_TO_FAIL": ["pip line"]}}}
+    s = g.summarize_report(json.dumps(rep))
+    assert "i.resolved: False" in s
+    assert "i.tests_base.PASS_TO_PASS: 500 tests" in s and "t499" not in s
+    assert "i.tests_base.PASS_TO_FAIL: 1 ['pip line']" in s
