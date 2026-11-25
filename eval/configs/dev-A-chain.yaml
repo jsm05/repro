@@ -1,0 +1,13 @@
+# Optional: the agent with cross-model failover on Dev, to see whether the fallback
+# models help. Chain policy may mix models, so this is never a headline number.
+config_id: dev-A-chain
+kind: agent
+dataset: swtbench
+split: dev
+instances_file: eval/samples/dev_15.txt
+logical_model: dev
+policy: chain
+llm: live
+max_output_tokens: 8000
+gate_timeout_s: 300.0
+prompt_version: v1

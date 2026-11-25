@@ -1,0 +1,13 @@
+# B1-main on Dev: 5 single-prompt samples, the first to pass the online gate wins.
+config_id: dev-B1-main
+kind: B1
+dataset: swtbench
+split: dev
+instances_file: eval/samples/dev_15.txt
+logical_model: primary
+policy: pinned
+llm: live
+k: 5
+temperature: 0.8
+max_output_tokens: 8000
+gate_timeout_s: 300.0

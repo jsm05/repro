@@ -1,0 +1,14 @@
+# A-main on Dev (M7, EVAL section 5 P5): the full agent on the primary model, pinned,
+# defaults from DESIGN 5.6. All prompt, gate and budget tuning happens on these 15.
+# Each round bumps prompt_version (or whatever changed) and runs under a new run_id.
+config_id: dev-A-main
+kind: agent
+dataset: swtbench
+split: dev
+instances_file: eval/samples/dev_15.txt
+logical_model: primary
+policy: pinned
+llm: live
+max_output_tokens: 8000
+gate_timeout_s: 300.0
+prompt_version: v1
