@@ -93,8 +93,11 @@ def test_cli_refuses_unbuilt_dataset(bad: str, tmp_path: Path) -> None:
     from repro.cli import main
 
     cfg = tmp_path / "c.yaml"
+    # One Dev instance: a whole-dataset run would be refused first for touching Test.
+    dev_one = (Path(__file__).resolve().parents[2] / "eval" / "samples" / "dev_15.txt"
+               ).read_text().split()[0]
     cfg.write_text(f"config_id: x\nkind: agent\ndataset: {bad}\nllm: cassette\n"
-                   "cassette_dir: nowhere\n")
+                   f"cassette_dir: nowhere\ninstances: [{dev_one}]\n")
     res = CliRunner().invoke(main, ["eval", "--config", str(cfg), "--run-id", "x",
                                     "--results-dir", str(tmp_path)])
     assert res.exit_code != 0 and "records not found" in res.output

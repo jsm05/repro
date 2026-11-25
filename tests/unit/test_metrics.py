@@ -157,7 +157,7 @@ def test_config_hash_changes_with_every_field() -> None:
         "max_deferrals": 9, "notes": "n", "cassette_match": "order", "max_steps": 3,
         "max_gate_checks": 2, "active_minutes": 1.0, "hard_cap_minutes": 2.0,
         "max_tool_errors": 1, "max_repeats": 1, "prompt_version": "v2",
-        "instances_file": "f.txt",
+        "instances_file": "f.txt", "judge": True, "split": "dev",
     }
     assert set(changed) == set(EvalConfig.model_fields)
     hashes = {base.hash}
