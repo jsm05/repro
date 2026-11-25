@@ -1,0 +1,721 @@
+[
+ {
+  "agree": true,
+  "disk_free_gb": 112.4,
+  "exception": false,
+  "instance_id": "django__django-11138",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/timezones/tests.py::NewDatabaseTests::test_query_convert_timezones",
+  "pass": true,
+  "seconds": 816,
+  "transitions": {
+   "tests/timezones/tests.py::NewDatabaseTests::test_query_convert_timezones": "F\u2192P"
+  }
+ },
+ {
+  "agree": false,
+  "disk_free_gb": 112.5,
+  "exception": false,
+  "instance_id": "sphinx-doc__sphinx-9281",
+  "official": "unresolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/test_util_inspect.py::test_object_description_enum",
+  "pass": false,
+  "seconds": 443,
+  "transitions": {
+   "tests/test_util_inspect.py::test_object_description_enum": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.4,
+  "exception": false,
+  "instance_id": "pylint-dev__pylint-8898",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/config/test_config.py::test_csv_regex_error",
+  "pass": true,
+  "seconds": 451,
+  "transitions": {
+   "tests/config/test_config.py::test_csv_regex_error": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.4,
+  "exception": false,
+  "instance_id": "django__django-13344",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/deprecation/test_middleware_mixin.py::MiddlewareMixinTests::test_coroutine",
+  "pass": true,
+  "seconds": 1509,
+  "transitions": {
+   "tests/deprecation/test_middleware_mixin.py::MiddlewareMixinTests::test_coroutine": "F\u2192P",
+   "tests/deprecation/test_middleware_mixin.py::MiddlewareMixinTests::test_deprecation": "E\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.5,
+  "exception": false,
+  "instance_id": "pytest-dev__pytest-7432",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: testing/test_skipping.py::TestXFail::test_xfail_run_with_skip_mark[test_input1-expected1]",
+  "pass": true,
+  "seconds": 385,
+  "transitions": {
+   "testing/test_skipping.py::TestXFail::test_xfail_run_with_skip_mark[test_input1-expected1]": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 116.0,
+  "exception": false,
+  "instance_id": "django__django-9296",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/pagination/tests.py::PaginationTests::test_paginator_iteration",
+  "pass": true,
+  "seconds": 583,
+  "transitions": {
+   "tests/pagination/tests.py::PaginationTests::test_paginator_iteration": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 111.7,
+  "exception": false,
+  "instance_id": "django__django-16429",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/utils_tests/test_timesince.py::TZAwareTimesinceTests::test_depth, tests/utils_tests/test_timesince.py::TZAwareTimesinceTests::test_thousand_years_ago",
+  "pass": true,
+  "seconds": 522,
+  "transitions": {
+   "tests/utils_tests/test_timesince.py::TZAwareTimesinceTests::test_depth": "F\u2192P",
+   "tests/utils_tests/test_timesince.py::TZAwareTimesinceTests::test_depth_invalid": "E\u2192P",
+   "tests/utils_tests/test_timesince.py::TZAwareTimesinceTests::test_thousand_years_ago": "F\u2192P",
+   "tests/utils_tests/test_timesince.py::Test other units.": "P\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.1,
+  "exception": false,
+  "instance_id": "sympy__sympy-12419",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: sympy/matrices/expressions/tests/test_matexpr.py::test_Identity",
+  "pass": true,
+  "seconds": 370,
+  "transitions": {
+   "sympy/matrices/expressions/tests/test_matexpr.py::test_Identity": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 111.7,
+  "exception": false,
+  "instance_id": "django__django-16315",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/bulk_create/tests.py::BulkCreateTests::test_update_conflicts_unique_fields_update_fields_db_column",
+  "pass": true,
+  "seconds": 899,
+  "transitions": {
+   "tests/bulk_create/tests.py::BulkCreateTests::test_update_conflicts_unique_fields_update_fields_db_column": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 115.6,
+  "exception": false,
+  "instance_id": "django__django-11163",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/model_forms/tests.py::ModelOneToOneFieldTests::test_modelform_subclassed_model",
+  "pass": true,
+  "seconds": 338,
+  "transitions": {
+   "tests/model_forms/tests.py::ModelOneToOneFieldTests::test_modelform_subclassed_model": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.3,
+  "exception": false,
+  "instance_id": "astropy__astropy-14365",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: astropy/io/ascii/tests/test_qdp.py::test_roundtrip[True]",
+  "pass": true,
+  "seconds": 517,
+  "transitions": {
+   "astropy/io/ascii/tests/test_qdp.py::test_roundtrip[True]": "F\u2192P"
+  }
+ },
+ {
+  "agree": false,
+  "disk_free_gb": 112.4,
+  "exception": false,
+  "instance_id": "django__django-13297",
+  "official": "unresolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/generic_views/test_base.py::DeprecationTests::test_template_params_filtering",
+  "pass": false,
+  "seconds": 434,
+  "transitions": {
+   "tests/generic_views/test_base.py::DeprecationTests::test_template_params_filtering": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 116.2,
+  "exception": false,
+  "instance_id": "sympy__sympy-22456",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: sympy/codegen/tests/test_ast.py::test_String",
+  "pass": true,
+  "seconds": 317,
+  "transitions": {
+   "sympy/codegen/tests/test_ast.py::test_String": "F\u2192P"
+  }
+ },
+ {
+  "agree": false,
+  "disk_free_gb": 112.5,
+  "exception": false,
+  "instance_id": "sphinx-doc__sphinx-9658",
+  "official": "unresolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/test_util_typing.py::test_restify_mock",
+  "pass": false,
+  "seconds": 467,
+  "transitions": {
+   "tests/test_util_typing.py::test_restify_mock": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 111.2,
+  "exception": false,
+  "instance_id": "scikit-learn__scikit-learn-13328",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: sklearn/linear_model/tests/test_huber.py::test_huber_bool",
+  "pass": true,
+  "seconds": 858,
+  "transitions": {
+   "sklearn/linear_model/tests/test_huber.py::test_huber_bool": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 108.9,
+  "exception": false,
+  "instance_id": "pydata__xarray-4687",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: xarray/tests/test_computation.py::test_where_attrs",
+  "pass": true,
+  "seconds": 1422,
+  "transitions": {
+   "xarray/tests/test_computation.py::test_where_attrs": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.4,
+  "exception": false,
+  "instance_id": "django__django-12155",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/admin_docs/test_utils.py::TestUtils::test_parse_rst_with_docstring_no_leading_line_feed",
+  "pass": true,
+  "seconds": 783,
+  "transitions": {
+   "tests/admin_docs/test_utils.py::TestUtils::test_parse_rst_with_docstring_no_leading_line_feed": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.5,
+  "exception": false,
+  "instance_id": "sympy__sympy-19040",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: sympy/polys/tests/test_polytools.py::test_issue_5786",
+  "pass": true,
+  "seconds": 611,
+  "transitions": {
+   "sympy/polys/tests/test_polytools.py::test_issue_5786": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.2,
+  "exception": false,
+  "instance_id": "django__django-14434",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/schema/tests.py::SchemaTests::test_unique_constraint",
+  "pass": true,
+  "seconds": 556,
+  "transitions": {
+   "tests/schema/tests.py::SchemaTests::test_unique_constraint": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.2,
+  "exception": false,
+  "instance_id": "django__django-14238",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/model_fields/test_autofield.py::AutoFieldInheritanceTests::test_issubclass_of_autofield, tests/model_options/test_default_pk.py::TestDefaultPK::test_default_auto_field_setting_bigautofield_",
+  "pass": true,
+  "seconds": 1461,
+  "transitions": {
+   "tests/model_fields/test_autofield.py::AutoFieldInheritanceTests::test_issubclass_of_autofield": "F\u2192P",
+   "tests/model_options/test_default_pk.py::TestDefaultPK::test_default_auto_field_setting_bigautofield_subclass": "F\u2192P"
+  }
+ },
+ {
+  "agree": false,
+  "disk_free_gb": 112.4,
+  "exception": false,
+  "instance_id": "django__django-11119",
+  "official": "unresolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/template_tests/test_engine.py::RenderToStringTest::test_autoescape_off",
+  "pass": false,
+  "seconds": 427,
+  "transitions": {
+   "tests/template_tests/test_engine.py::RenderToStringTest::test_autoescape_off": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 111.1,
+  "exception": false,
+  "instance_id": "matplotlib__matplotlib-21568",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: lib/matplotlib/tests/test_dates.py::test_date_formatter_usetex[delta2-expected2], lib/matplotlib/tests/test_dates.py::test_date_formatter_usetex[delta3-expected3], lib/matplotlib/tests/test_dates",
+  "pass": true,
+  "seconds": 1134,
+  "transitions": {
+   "lib/matplotlib/tests/test_dates.py::test_concise_formatter_usetex[t_delta2-expected2]": "F\u2192P",
+   "lib/matplotlib/tests/test_dates.py::test_concise_formatter_usetex[t_delta3-expected3]": "F\u2192P",
+   "lib/matplotlib/tests/test_dates.py::test_date_formatter_usetex[delta2-expected2]": "F\u2192P",
+   "lib/matplotlib/tests/test_dates.py::test_date_formatter_usetex[delta3-expected3]": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.3,
+  "exception": false,
+  "instance_id": "astropy__astropy-12907",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: astropy/modeling/tests/test_separable.py::test_separable[compound_model6-result6], astropy/modeling/tests/test_separable.py::test_separable[compound_model9-result9]",
+  "pass": true,
+  "seconds": 675,
+  "transitions": {
+   "astropy/modeling/tests/test_separable.py::test_separable[compound_model6-result6]": "F\u2192P",
+   "astropy/modeling/tests/test_separable.py::test_separable[compound_model9-result9]": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 115.7,
+  "exception": false,
+  "instance_id": "sympy__sympy-24443",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: sympy/combinatorics/tests/test_homomorphisms.py::test_homomorphism",
+  "pass": true,
+  "seconds": 333,
+  "transitions": {
+   "sympy/combinatorics/tests/test_homomorphisms.py::test_homomorphism": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 106.0,
+  "exception": false,
+  "instance_id": "matplotlib__matplotlib-24177",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: lib/matplotlib/tests/test_axes.py::test_small_autoscale",
+  "pass": true,
+  "seconds": 2113,
+  "transitions": {
+   "lib/matplotlib/tests/test_axes.py::test_small_autoscale": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 106.0,
+  "exception": false,
+  "instance_id": "matplotlib__matplotlib-24637",
+  "official": "unresolved",
+  "ours": "WRONG_TEST",
+  "ours_reason": "O1 failed: lib/matplotlib/tests/test_backend_svg.py::test_annotationbbox_gid F\u2192F",
+  "pass": false,
+  "seconds": 1320,
+  "transitions": {
+   "lib/matplotlib/tests/test_backend_svg.py::test_annotationbbox_gid": "F\u2192F"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.2,
+  "exception": false,
+  "instance_id": "django__django-14752",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/admin_views/test_autocomplete_view.py::AutocompleteJsonViewTests::test_serialize_result",
+  "pass": true,
+  "seconds": 449,
+  "transitions": {
+   "tests/admin_views/test_autocomplete_view.py::AutocompleteJsonViewTests::test_serialize_result": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 116.2,
+  "exception": false,
+  "instance_id": "sympy__sympy-13974",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: sympy/physics/quantum/tests/test_tensorproduct.py::test_tensor_product_simp",
+  "pass": true,
+  "seconds": 306,
+  "transitions": {
+   "sympy/physics/quantum/tests/test_tensorproduct.py::test_tensor_product_simp": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.5,
+  "exception": false,
+  "instance_id": "sympy__sympy-24661",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: sympy/parsing/tests/test_sympy_parser.py::test_issue_24288",
+  "pass": true,
+  "seconds": 512,
+  "transitions": {
+   "sympy/parsing/tests/test_sympy_parser.py::test_issue_24288": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.2,
+  "exception": false,
+  "instance_id": "django__django-15554",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/filtered_relation/tests.py::FilteredRelationTests::test_multiple",
+  "pass": true,
+  "seconds": 429,
+  "transitions": {
+   "tests/filtered_relation/tests.py::FilteredRelationTests::test_multiple": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.2,
+  "exception": false,
+  "instance_id": "django__django-15375",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/aggregation/tests.py::AggregateTestCase::test_aggregation_default_after_annotation",
+  "pass": true,
+  "seconds": 375,
+  "transitions": {
+   "tests/aggregation/tests.py::AggregateTestCase::test_aggregation_default_after_annotation": "F\u2192P"
+  }
+ },
+ {
+  "agree": false,
+  "disk_free_gb": 112.0,
+  "exception": false,
+  "instance_id": "django__django-16485",
+  "official": "unresolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/template_tests/filter_tests/test_floatformat.py::FunctionTests::test_zero_values",
+  "pass": false,
+  "seconds": 527,
+  "transitions": {
+   "tests/template_tests/filter_tests/test_floatformat.py::FunctionTests::test_zero_values": "F\u2192P"
+  }
+ },
+ {
+  "agree": false,
+  "disk_free_gb": 112.0,
+  "exception": false,
+  "instance_id": "django__django-16502",
+  "official": "unresolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/servers/test_basehttp.py::WSGIRequestHandlerTestCase::test_no_body_returned_for_head_requests",
+  "pass": false,
+  "seconds": 572,
+  "transitions": {
+   "tests/servers/test_basehttp.py::WSGIRequestHandlerTestCase::test_no_body_returned_for_head_requests": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.4,
+  "exception": false,
+  "instance_id": "django__django-11087",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/delete/tests.py::DeletionTests::test_only_referenced_fields_selected",
+  "pass": true,
+  "seconds": 523,
+  "transitions": {
+   "tests/delete/tests.py::DeletionTests::test_only_referenced_fields_selected": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.5,
+  "exception": false,
+  "instance_id": "pytest-dev__pytest-5787",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: testing/test_reports.py::TestReportSerialization::test_chained_exceptions[TestReport], testing/test_reports.py::TestReportSerialization::test_chained_exceptions[CollectReport]",
+  "pass": true,
+  "seconds": 589,
+  "transitions": {
+   "testing/test_reports.py::TestReportSerialization::test_chained_exceptions[CollectReport]": "F\u2192P",
+   "testing/test_reports.py::TestReportSerialization::test_chained_exceptions[TestReport]": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 111.2,
+  "exception": false,
+  "instance_id": "scikit-learn__scikit-learn-12973",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: sklearn/linear_model/tests/test_least_angle.py::test_lasso_lars_fit_copyX_behaviour[False]",
+  "pass": true,
+  "seconds": 1041,
+  "transitions": {
+   "sklearn/linear_model/tests/test_least_angle.py::test_lasso_lars_fit_copyX_behaviour[False]": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.4,
+  "exception": false,
+  "instance_id": "django__django-13820",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/migrations/test_loader.py::LoaderTests::test_loading_package_without__file__",
+  "pass": true,
+  "seconds": 391,
+  "transitions": {
+   "tests/migrations/test_loader.py::LoaderTests::test_loading_package_without__file__": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.4,
+  "exception": false,
+  "instance_id": "django__django-12858",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/invalid_models_tests/test_models.py::OtherModelTests::test_ordering_pointing_to_lookup_not_transform",
+  "pass": true,
+  "seconds": 816,
+  "transitions": {
+   "tests/invalid_models_tests/test_models.py::OtherModelTests::test_ordering_pointing_to_lookup_not_transform": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 108.9,
+  "exception": false,
+  "instance_id": "pydata__xarray-4356",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: xarray/tests/test_duck_array_ops.py::test_min_count_nd[sum-False-float], xarray/tests/test_duck_array_ops.py::test_min_count_nd[sum-False-int], xarray/tests/test_duck_array_ops.py::test_min_count",
+  "pass": true,
+  "seconds": 1245,
+  "transitions": {
+   "xarray/tests/test_duck_array_ops.py::test_min_count_nd[prod-False-bool_]": "F\u2192P",
+   "xarray/tests/test_duck_array_ops.py::test_min_count_nd[prod-False-float32]": "F\u2192P",
+   "xarray/tests/test_duck_array_ops.py::test_min_count_nd[prod-False-float]": "F\u2192P",
+   "xarray/tests/test_duck_array_ops.py::test_min_count_nd[prod-False-int]": "F\u2192P",
+   "xarray/tests/test_duck_array_ops.py::test_min_count_nd[sum-False-bool_]": "F\u2192P",
+   "xarray/tests/test_duck_array_ops.py::test_min_count_nd[sum-False-float32]": "F\u2192P",
+   "xarray/tests/test_duck_array_ops.py::test_min_count_nd[sum-False-float]": "F\u2192P",
+   "xarray/tests/test_duck_array_ops.py::test_min_count_nd[sum-False-int]": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.2,
+  "exception": false,
+  "instance_id": "django__django-15525",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/fixtures_regress/tests.py::Natural keys with foreing keys in dependencies works in a multiple",
+  "pass": true,
+  "seconds": 413,
+  "transitions": {
+   "tests/fixtures_regress/tests.py::Natural keys with foreing keys in dependencies works in a multiple": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.5,
+  "exception": false,
+  "instance_id": "sympy__sympy-21847",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: sympy/polys/tests/test_monomials.py::test_monomials",
+  "pass": true,
+  "seconds": 384,
+  "transitions": {
+   "sympy/polys/tests/test_monomials.py::test_monomials": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.5,
+  "exception": false,
+  "instance_id": "sphinx-doc__sphinx-8548",
+  "official": "unresolved",
+  "ours": "WRONG_TEST",
+  "ours_reason": "O1 failed: tests/test_ext_autodoc_autoclass.py::test_inherited_instance_variable E\u2192E",
+  "pass": false,
+  "seconds": 476,
+  "transitions": {
+   "tests/test_ext_autodoc_autoclass.py::test_inherited_instance_variable": "E\u2192E"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.2,
+  "exception": false,
+  "instance_id": "django__django-15098",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/i18n/tests.py::MiscTests::test_get_language_from_path_real",
+  "pass": true,
+  "seconds": 374,
+  "transitions": {
+   "tests/i18n/tests.py::MiscTests::test_get_language_from_path_real": "F\u2192P",
+   "tests/i18n/tests.py::MiscTests::test_get_supported_language_variant_null": "E\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.5,
+  "exception": false,
+  "instance_id": "sympy__sympy-20590",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: sympy/core/tests/test_basic.py::test_immutable",
+  "pass": true,
+  "seconds": 853,
+  "transitions": {
+   "sympy/core/tests/test_basic.py::test_immutable": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 111.2,
+  "exception": false,
+  "instance_id": "scikit-learn__scikit-learn-15100",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: sklearn/feature_extraction/tests/test_text.py::test_strip_accents",
+  "pass": true,
+  "seconds": 825,
+  "transitions": {
+   "sklearn/feature_extraction/tests/test_text.py::test_strip_accents": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.4,
+  "exception": false,
+  "instance_id": "django__django-11728",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/admin_docs/test_views.py::AdminDocViewFunctionsTests::test_simplify_regex",
+  "pass": true,
+  "seconds": 451,
+  "transitions": {
+   "tests/admin_docs/test_views.py::AdminDocViewFunctionsTests::test_simplify_regex": "F\u2192P",
+   "tests/admin_docs/test_views.py::TestModelDetailView::test_app_not_found": "P\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 106.2,
+  "exception": false,
+  "instance_id": "matplotlib__matplotlib-23412",
+  "official": "unresolved",
+  "ours": "WRONG_TEST",
+  "ours_reason": "O1 failed: lib/matplotlib/tests/test_patches.py::test_dash_offset_patch_draw[png] F\u2192F",
+  "pass": false,
+  "seconds": 1054,
+  "transitions": {
+   "lib/matplotlib/tests/test_patches.py::test_dash_offset_patch_draw[png]": "F\u2192F"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.2,
+  "exception": false,
+  "instance_id": "django__django-15382",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/expressions/tests.py::ExistsTests::test_negated_empty_exists",
+  "pass": true,
+  "seconds": 762,
+  "transitions": {
+   "tests/expressions/tests.py::ExistsTests::test_negated_empty_exists": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.2,
+  "exception": false,
+  "instance_id": "django__django-15467",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/admin_widgets/tests.py::AdminFormfieldForDBFieldTests::test_radio_fields_foreignkey_formfield_overrides_empty_label",
+  "pass": true,
+  "seconds": 649,
+  "transitions": {
+   "tests/admin_widgets/tests.py::AdminFormfieldForDBFieldTests::test_radio_fields_foreignkey_formfield_overrides_empty_label": "F\u2192P"
+  }
+ },
+ {
+  "agree": true,
+  "disk_free_gb": 112.2,
+  "exception": false,
+  "instance_id": "django__django-15732",
+  "official": "resolved",
+  "ours": "REPRODUCED",
+  "ours_reason": "F\u2192P: tests/migrations/test_operations.py::OperationTests::test_remove_unique_together_on_unique_field",
+  "pass": true,
+  "seconds": 620,
+  "transitions": {
+   "tests/migrations/test_operations.py::OperationTests::test_remove_unique_together_on_unique_field": "F\u2192P"
+  }
+ }
+]
