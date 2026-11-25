@@ -21,7 +21,7 @@ from repro.datasets.fixtures import FixtureSource
 from repro.eval.rows import ResultRow
 from repro.eval.run import UnitOutput
 from repro.eval.trace import TraceRecorder
-from repro.gate.checks import GateConfig, OnlineGate, SandboxFactory
+from repro.gate.checks import GateConfig, JudgeFn, OnlineGate, SandboxFactory
 from repro.llm.budget import BudgetExceeded, Ledger, LedgerEntry, list_price_usd
 from repro.llm.clock import Clock, RealClock
 from repro.llm.router import Deferred
@@ -189,17 +189,28 @@ class Executor:
 
     # -- methods ----------------------------------------------------------------------
 
+    def _judge(self, loaded: LoadedInstance, llm: MeteredLLM,
+               trace: TraceRecorder) -> JudgeFn | None:
+        """The G3 judge when the config asks for it. It gets the public issue text only."""
+        if not self.config.judge:
+            return None
+        from repro.gate.judge import Judge
+
+        return Judge(llm, loaded.instance.public.issue_text,
+                     on_call=lambda d: trace.add("judge", d))
+
     def _baseline(self, loaded: LoadedInstance, llm: MeteredLLM,
                   trace: TraceRecorder) -> MethodOutcome:
         cfg = self.config
         gate_cfg = GateConfig(timeout_s=cfg.gate_timeout_s)
+        judge = self._judge(loaded, llm, trace)
         rejections: dict[str, int] = {}
         checks = 0
 
         def gate(c: Candidate) -> bool:
             nonlocal checks
             checks += 1
-            v = OnlineGate(loaded.factory, gate_cfg).verify(c)
+            v = OnlineGate(loaded.factory, gate_cfg, judge).verify(c)
             if v.failed_check:
                 rejections[v.failed_check] = rejections.get(v.failed_check, 0) + 1
             trace.add("gate_check", {"candidate": c.origin, "passed": v.passed,
@@ -251,8 +262,10 @@ class Executor:
         )
         sandbox = loaded.factory()
         try:
-            ws = Workspace(sandbox, loaded.repo, loaded.factory,
-                           GateConfig(timeout_s=cfg.gate_timeout_s))
+            gate_cfg = GateConfig(timeout_s=cfg.gate_timeout_s)
+            judge = self._judge(loaded, llm, trace)
+            ws = Workspace(sandbox, loaded.repo, loaded.factory, gate_cfg,
+                           gate=OnlineGate(loaded.factory, gate_cfg, judge).verify)
             res = AgentLoop(loaded.instance.public, ws, llm, self.estimator, self.clock, trace,
                             limits, wait_s=handle.rate_limit_wait_s).run()
         finally:

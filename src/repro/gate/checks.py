@@ -18,6 +18,8 @@ from repro.sandbox.base import Sandbox, SandboxPathError
 from repro.sandbox.treehash import is_test_path
 
 SandboxFactory = Callable[[], Sandbox]
+# (candidate, test id, failure) -> (ok, why): the optional G3 judge (gate/judge.py).
+JudgeFn = Callable[[Candidate, str, FailureDetail], tuple[bool, str]]
 NOT_EXECUTED = {TestStatus.ERROR, TestStatus.SKIPPED, TestStatus.XFAIL, TestStatus.XPASS}
 
 
@@ -59,9 +61,11 @@ class _Run:
 
 
 class OnlineGate:
-    def __init__(self, factory: SandboxFactory, config: GateConfig | None = None):
+    def __init__(self, factory: SandboxFactory, config: GateConfig | None = None,
+                 judge: JudgeFn | None = None):
         self.factory = factory
         self.config = config or GateConfig()
+        self.judge = judge
 
     def verify(self, candidate: Candidate) -> GateVerdict:
         cfg = self.config
@@ -136,6 +140,14 @@ class OnlineGate:
                 ok, why = right_reason(f)
                 if not ok:
                     return verdict("G3", f"{t}: {why}")
+            # Optional judge: runs only once the rules pass, so it can only veto (T7.2).
+            if self.judge is not None:
+                for t in failing:
+                    f = result.outcomes[t].failure
+                    assert f is not None
+                    ok, why = self.judge(candidate, t, f)
+                    if not ok:
+                        return verdict("G3", f"{t}: judge: {why}")
 
         # G4: same statuses in every run, and failing tests fail the same way.
         for k, run in enumerate(runs[1:], start=1):

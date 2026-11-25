@@ -50,6 +50,10 @@ class EvalConfig(BaseModel):
     max_tool_errors: int = 5
     max_repeats: int = 3
     prompt_version: str = "v1"
+    # Optional LLM judge in G3 (T7.2), the A-main+judge ablation. Off by default.
+    judge: bool = False
+    # Which sample this config may touch (T7.3, T7.4): any test_50 instance needs --final.
+    split: Literal["fixtures", "dev", "test"] = "fixtures"
     max_deferrals: int = 3
     notes: str = Field(default="", description="Free text; part of the hash like every field")
 

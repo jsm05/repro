@@ -347,11 +347,15 @@ def _dataset(cfg_dataset: str, fixtures_root: Path, swt_records: Path = DEFAULT_
 @click.option("--shard", "shard_text", default="1/1", show_default=True, help="k/N")
 @click.option("--stop-when-exhausted", is_flag=True,
               help="Exit cleanly when no route of the logical model has quota left.")
+@click.option("--final", is_flag=True,
+              help="Allow Test instances. Needs a clean checkout of an eval-freeze-* tag.")
+@click.option("--test-sample", type=click.Path(path_type=Path),
+              default=Path("eval/samples/test_50.txt"), show_default=True)
 def eval_cmd(config_path: Path, run_id: str, results_dir: Path, remote: str | None,
              workdir: Path, fixtures_root: Path, routes_path: Path, swt_records: Path,
              max_units: int | None,
              deadline: str | None, deadline_minutes: float | None, shard_text: str,
-             stop_when_exhausted: bool) -> None:
+             stop_when_exhausted: bool, final: bool, test_sample: Path) -> None:
     """Run a benchmark config in resumable batches."""
     from repro.config import EvalConfig
     from repro.eval.execute import Executor
@@ -363,6 +367,14 @@ def eval_cmd(config_path: Path, run_id: str, results_dir: Path, remote: str | No
     from repro.llm.registry import Registry
 
     cfg = EvalConfig.from_yaml(config_path)
+    from repro.eval.guards import GuardError, check_access, load_test_sample
+
+    try:  # before anything loads or runs (T7.3, T7.4)
+        check_access(cfg, cfg.instance_ids(), final=final,
+                     test_sample=load_test_sample(test_sample))
+    except GuardError as exc:
+        click.echo(f"error: {exc}", err=True)
+        raise SystemExit(2) from exc
     shard, shards = parse_shard(shard_text)
     dataset = _dataset(cfg.dataset, fixtures_root, swt_records, run_id)
     ids = cfg.instance_ids() or dataset.ids()

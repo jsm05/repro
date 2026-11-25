@@ -131,10 +131,16 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           RESULTS_REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
-        run: >
-          repro eval --config "$CONFIG" --run-id "$RUN_ID"
-          --shard "$SHARD/$SHARDS" --deadline-minutes 330 --stop-when-exhausted
-          --results-branch "$RESULTS_REMOTE" --workdir /tmp/results-branch
+        # A split: test config runs with --final, which repro refuses unless this is a
+        # clean checkout of an eval-freeze-* tag (T7.3). Dev configs never get it (T7.4).
+        run: |
+          EXTRA=()
+          if python -c "import yaml, os, sys; sys.exit(yaml.safe_load(open(os.environ['CONFIG'])).get('split') != 'test')"; then
+            EXTRA+=(--final)
+          fi
+          repro eval --config "$CONFIG" --run-id "$RUN_ID" \
+            --shard "$SHARD/$SHARDS" --deadline-minutes 330 --stop-when-exhausted \
+            --results-branch "$RESULTS_REMOTE" --workdir /tmp/results-branch "${EXTRA[@]}"
       - name: Upload shard files
         if: always()
         uses: actions/upload-artifact@v4
