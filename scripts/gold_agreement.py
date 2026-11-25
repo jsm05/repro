@@ -99,7 +99,8 @@ def official(instance_id: str, run_id: str) -> str:
 
 
 def write_report(rows: list[dict[str, Any]], out: Path, total: int,
-                 exceptions: dict[str, dict[str, str]] | None = None) -> int:
+                 exceptions: dict[str, dict[str, str]] | None = None,
+                 sample: str = "pilot_10") -> int:
     """Writes the report; returns how many instances passed (see `judge`)."""
     exceptions = load_exceptions() if exceptions is None else exceptions
     for r in rows:
@@ -108,7 +109,8 @@ def write_report(rows: list[dict[str, Any]], out: Path, total: int,
     passed = sum(1 for r in rows if r.get("pass"))
     explained = [r for r in rows if r.get("exception")]
     unscored = [r["instance_id"] for r in rows if str(r["official"]).startswith("no result")]
-    lines = ["# Gold agreement on the pilot (T6.D8)", "",
+    title = "the pilot" if sample == "pilot_10" else f"`{sample}`"
+    lines = [f"# Gold agreement on {title} (T6.D8)", "",
              f"Gold tests F→P in our oracle and the official SWT-bench harness agrees: "
              f"{passed} of {total} ({passed - len(explained)} outright, {len(explained)} "
              f"as explained exceptions below). Raw verdicts match on {agree} of {len(rows)} "
@@ -151,6 +153,7 @@ def main() -> int:
     ap.add_argument("--merge", help="directory of per-instance JSON files: write the report")
     args = ap.parse_args()
     ids = Path(args.ids_file).read_text().split()
+    sample = Path(args.ids_file).stem
     if args.merge:
         by_id: dict[str, dict[str, Any]] = {}
         files = sorted(Path(args.merge).rglob("*.json"), key=lambda f: "previous" not in str(f))
@@ -164,7 +167,7 @@ def main() -> int:
         for iid in missing:
             rows.append({"instance_id": iid, "ours": "not run", "official": "not run",
                          "agree": False, "seconds": 0, "error": "no result from its job"})
-        passed = write_report(rows, Path(args.out), len(ids))
+        passed = write_report(rows, Path(args.out), len(ids), sample=sample)
         print(f"passed: {passed}/{len(ids)}")
         return 0 if passed == len(ids) else 1
     if args.only:
@@ -223,9 +226,10 @@ def main() -> int:
         row["seconds"] = round(time.monotonic() - t0)
         rows.append(row)
         print(json.dumps(row), flush=True)
-        write_report(rows, out, len(ids))  # after every instance, so a cut-off run keeps it
+        # After every instance, so a cut-off run keeps what it has.
+        write_report(rows, out, len(ids), sample=sample)
 
-    passed = write_report(rows, Path(args.out), len(ids))
+    passed = write_report(rows, Path(args.out), len(ids), sample=sample)
     print(f"passed: {passed}/{len(ids)}")
     return 0 if passed == len(ids) else 1
 

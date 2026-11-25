@@ -2,8 +2,10 @@ name: docker-tests
 
 # Manual (E1). Real-Docker tests (T6.D1 to T6.D9): the sandbox contract suite on
 # DockerSandbox, network/memory/PID/privilege checks, .git hardening and the reaper; then
-# gold agreement on eval/samples/pilot_10.txt against the official SWT-bench harness,
-# one matrix job per instance, merged into eval/gold-agreement.md. No API keys.
+# gold agreement on a sample against the official SWT-bench harness, one matrix job per
+# instance, merged into a report: eval/gold-agreement.md for the pilot, and
+# eval/gold-<sample>.md for dev_15 and test_50 (the M7 gold check, no model runs).
+# No API keys.
 
 on:
   workflow_dispatch:
@@ -12,8 +14,13 @@ on:
         description: "Also run gold agreement on the pilot (one job per instance)"
         type: boolean
         default: true
+      sample:
+        description: "Which sample to gold-check"
+        type: choice
+        options: [pilot_10, dev_15, test_50]
+        default: pilot_10
       only:
-        description: "Optional: space-separated pilot ids to rerun (others keep their last result)"
+        description: "Optional: space-separated ids to rerun (others keep their last result)"
         default: ""
 
 permissions:
@@ -55,7 +62,8 @@ jobs:
         id: ids
         env:
           ONLY: ${{ inputs.only }}
-        run: python -c "import json, os; ids = os.environ['ONLY'].split() or open('eval/samples/pilot_10.txt').read().split(); print('ids=' + json.dumps(ids))" >> "$GITHUB_OUTPUT"
+          SAMPLE: ${{ inputs.sample }}
+        run: python -c "import json, os; ids = os.environ['ONLY'].split() or open('eval/samples/' + os.environ['SAMPLE'] + '.txt').read().split(); print('ids=' + json.dumps(ids))" >> "$GITHUB_OUTPUT"
 
   gold:
     needs: pilot
@@ -92,6 +100,7 @@ jobs:
         env:
           REPRO_PILOT_RECORDS: /tmp/pilot_records.jsonl
           REPRO_PILOT_ONLY: ${{ matrix.instance }}
+          REPRO_GOLD_SAMPLE: ${{ inputs.sample }}
           REPRO_GOLD_OUT: /tmp/gold/gold-${{ matrix.instance }}.md
           REPRO_HARNESS_DEBUG: "1"
         run: pytest -m docker tests/docker -k gold -v -s
@@ -119,18 +128,22 @@ jobs:
         with:
           path: /tmp/gold
       - name: Merge (instances not rerun keep their last committed result)
+        env:
+          SAMPLE: ${{ inputs.sample }}
         run: |
-          if [ -f eval/gold-agreement.json ]; then mkdir -p /tmp/gold/previous && cp eval/gold-agreement.json /tmp/gold/previous/; fi
-          python scripts/gold_agreement.py eval/samples/pilot_10.txt --merge /tmp/gold --out eval/gold-agreement.md || true
+          if [ "$SAMPLE" = pilot_10 ]; then OUT=eval/gold-agreement; else OUT="eval/gold-$SAMPLE"; fi
+          echo "OUT=$OUT" >> "$GITHUB_ENV"
+          if [ -f "$OUT.json" ]; then mkdir -p /tmp/gold/previous && cp "$OUT.json" /tmp/gold/previous/; fi
+          python scripts/gold_agreement.py "eval/samples/$SAMPLE.txt" --merge /tmp/gold --out "$OUT.md" || true
       - name: Commit the gold agreement report
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add eval/gold-agreement.md eval/gold-agreement.json
+          git add "$OUT.md" "$OUT.json"
           if git diff --cached --quiet; then
             echo "nothing to commit"
             exit 0
           fi
-          git commit -m "docker-tests: gold agreement on the pilot (run ${{ github.run_id }})"
+          git commit -m "docker-tests: gold agreement on ${{ inputs.sample }} (run ${{ github.run_id }})"
           git pull --rebase origin "${GITHUB_REF_NAME}"
           git push origin "HEAD:${GITHUB_REF_NAME}"

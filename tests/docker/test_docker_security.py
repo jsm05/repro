@@ -158,12 +158,14 @@ def test_t6_d9_api_keys_never_enter_a_container(tmp_path: Path,
 @pytest.mark.skipif(not os.environ.get("REPRO_PILOT_RECORDS"),
                     reason="pilot records not exported (REPRO_PILOT_RECORDS)")
 def test_t6_d8_gold_agreement_on_pilot() -> None:
-    """T6.D8: gold tests are F→P in our oracle on the pilot, and the official harness agrees."""
+    """T6.D8: gold tests are F→P in our oracle on the pilot, and the official harness agrees.
+    REPRO_GOLD_SAMPLE picks another sample file (dev_15, test_50: the M7 gold check)."""
     only = os.environ.get("REPRO_PILOT_ONLY", "")
+    sample = os.environ.get("REPRO_GOLD_SAMPLE", "pilot_10")
     out = Path(os.environ.get("REPRO_GOLD_OUT", str(ROOT / "eval" / "gold-agreement.md")))
     # Output streams to the job log so progress is visible while it runs.
     res = subprocess.run([sys.executable, str(ROOT / "scripts" / "gold_agreement.py"),
-                          str(ROOT / "eval" / "samples" / "pilot_10.txt"), "--records",
+                          str(ROOT / "eval" / "samples" / f"{sample}.txt"), "--records",
                           os.environ["REPRO_PILOT_RECORDS"], "--out", str(out),
                           *(["--only", only] if only else [])],
                          cwd=ROOT, check=False)
