@@ -159,14 +159,14 @@
  },
  {
   "agree": false,
-  "disk_free_gb": 112.4,
+  "disk_free_gb": 111.9,
   "exception": false,
   "instance_id": "django__django-13297",
   "official": "unresolved",
   "ours": "REPRODUCED",
   "ours_reason": "F\u2192P: tests/generic_views/test_base.py::DeprecationTests::test_template_params_filtering",
   "pass": false,
-  "seconds": 434,
+  "seconds": 467,
   "transitions": {
    "tests/generic_views/test_base.py::DeprecationTests::test_template_params_filtering": "F\u2192P"
   }
@@ -293,7 +293,7 @@
   "ours": "REPRODUCED",
   "ours_reason": "F\u2192P: tests/template_tests/test_engine.py::RenderToStringTest::test_autoescape_off",
   "pass": false,
-  "seconds": 427,
+  "seconds": 426,
   "transitions": {
    "tests/template_tests/test_engine.py::RenderToStringTest::test_autoescape_off": "F\u2192P"
   }
@@ -444,14 +444,14 @@
  },
  {
   "agree": false,
-  "disk_free_gb": 112.0,
+  "disk_free_gb": 111.5,
   "exception": false,
   "instance_id": "django__django-16485",
   "official": "unresolved",
   "ours": "REPRODUCED",
   "ours_reason": "F\u2192P: tests/template_tests/filter_tests/test_floatformat.py::FunctionTests::test_zero_values",
   "pass": false,
-  "seconds": 527,
+  "seconds": 355,
   "transitions": {
    "tests/template_tests/filter_tests/test_floatformat.py::FunctionTests::test_zero_values": "F\u2192P"
   }
@@ -465,7 +465,7 @@
   "ours": "REPRODUCED",
   "ours_reason": "F\u2192P: tests/servers/test_basehttp.py::WSGIRequestHandlerTestCase::test_no_body_returned_for_head_requests",
   "pass": false,
-  "seconds": 572,
+  "seconds": 408,
   "transitions": {
    "tests/servers/test_basehttp.py::WSGIRequestHandlerTestCase::test_no_body_returned_for_head_requests": "F\u2192P"
   }

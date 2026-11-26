@@ -15,7 +15,7 @@ Gold tests F→P in our oracle and the official SWT-bench harness agrees: 41 of 
 | `django__django-16315` | REPRODUCED | resolved | yes | test_update_conflicts_unique_fields_update_fields_db_column F→P | 899 |  |
 | `django__django-11163` | REPRODUCED | resolved | yes | test_modelform_subclassed_model F→P | 338 |  |
 | `astropy__astropy-14365` | REPRODUCED | resolved | yes | test_roundtrip[True] F→P | 517 |  |
-| `django__django-13297` | REPRODUCED | unresolved | NO | test_template_params_filtering F→P | 434 |  |
+| `django__django-13297` | REPRODUCED | unresolved | NO | test_template_params_filtering F→P | 467 |  |
 | `sympy__sympy-22456` | REPRODUCED | resolved | yes | test_String F→P | 317 |  |
 | `sphinx-doc__sphinx-9658` | REPRODUCED | unresolved | NO | test_restify_mock F→P | 467 |  |
 | `scikit-learn__scikit-learn-13328` | REPRODUCED | resolved | yes | test_huber_bool F→P | 858 |  |
@@ -24,7 +24,7 @@ Gold tests F→P in our oracle and the official SWT-bench harness agrees: 41 of 
 | `sympy__sympy-19040` | REPRODUCED | resolved | yes | test_issue_5786 F→P | 611 |  |
 | `django__django-14434` | REPRODUCED | resolved | yes | test_unique_constraint F→P | 556 |  |
 | `django__django-14238` | REPRODUCED | resolved | yes | test_issubclass_of_autofield F→P, test_default_auto_field_setting_bigautofield_subclass F→P | 1461 |  |
-| `django__django-11119` | REPRODUCED | unresolved | NO | test_autoescape_off F→P | 427 |  |
+| `django__django-11119` | REPRODUCED | unresolved | NO | test_autoescape_off F→P | 426 |  |
 | `matplotlib__matplotlib-21568` | REPRODUCED | resolved | yes | test_concise_formatter_usetex[t_delta2-expected2] F→P, test_concise_formatter_usetex[t_delta3-expected3] F→P, test_date_formatter_usetex[delta2-expected2] F→P, test_date_formatter_usetex[delta3-expected3] F→P | 1134 |  |
 | `astropy__astropy-12907` | REPRODUCED | resolved | yes | test_separable[compound_model6-result6] F→P, test_separable[compound_model9-result9] F→P | 675 |  |
 | `sympy__sympy-24443` | REPRODUCED | resolved | yes | test_homomorphism F→P | 333 |  |
@@ -35,8 +35,8 @@ Gold tests F→P in our oracle and the official SWT-bench harness agrees: 41 of 
 | `sympy__sympy-24661` | REPRODUCED | resolved | yes | test_issue_24288 F→P | 512 |  |
 | `django__django-15554` | REPRODUCED | resolved | yes | test_multiple F→P | 429 |  |
 | `django__django-15375` | REPRODUCED | resolved | yes | test_aggregation_default_after_annotation F→P | 375 |  |
-| `django__django-16485` | REPRODUCED | unresolved | NO | test_zero_values F→P | 527 |  |
-| `django__django-16502` | REPRODUCED | unresolved | NO | test_no_body_returned_for_head_requests F→P | 572 |  |
+| `django__django-16485` | REPRODUCED | unresolved | NO | test_zero_values F→P | 355 |  |
+| `django__django-16502` | REPRODUCED | unresolved | NO | test_no_body_returned_for_head_requests F→P | 408 |  |
 | `django__django-11087` | REPRODUCED | resolved | yes | test_only_referenced_fields_selected F→P | 523 |  |
 | `pytest-dev__pytest-5787` | REPRODUCED | resolved | yes | test_chained_exceptions[CollectReport] F→P, test_chained_exceptions[TestReport] F→P | 589 |  |
 | `scikit-learn__scikit-learn-12973` | REPRODUCED | resolved | yes | test_lasso_lars_fit_copyX_behaviour[False] F→P | 1041 |  |
