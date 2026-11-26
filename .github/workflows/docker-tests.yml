@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       gold:
-        description: "Also run gold agreement on the pilot (one job per instance)"
+        description: "Also run gold agreement on the sample below (one job per instance)"
         type: boolean
         default: true
       sample:
