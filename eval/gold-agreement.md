@@ -4,7 +4,7 @@ Gold tests F→P in our oracle and the official SWT-bench harness agrees: 10 of 
 
 | Instance | Ours | Official | Agree | F→P per fail-to-pass test | Seconds | Note |
 |---|---|---|---|---|---|---|
-| `django__django-15127` | REPRODUCED | unresolved | explained | test_override_settings_level_tags F→P | 424 |  |
+| `django__django-15127` | REPRODUCED | unresolved | explained | test_override_settings_level_tags F→P | 856 |  |
 | `django__django-16662` | REPRODUCED | unresolved | explained | #24155 - Tests ordering of imports. F→P | 359 |  |
 | `django__django-16938` | REPRODUCED | resolved | yes | Basic serialization works. F→P, Deserialized content can be saved with force_insert as a parameter. F→P, Mapping such as fields should be deterministically ordered. (#24558) F→P, Serialized content can be deserialized. F→P, Serializing control characters with XML should fail as those characters F→P, The ability to create new objects by modifying serialized content. F→P, Year values before 1000AD are properly formatted F→P, test_serialize_no_only_pk_with_natural_keys F→P, test_serialize_only_pk F→P, test_serialize_prefetch_related_m2m F→P, test_serialize_progressbar F→P, test_serialize_no_only_pk_with_natural_keys F→P, test_serialize_only_pk F→P, test_serialize_prefetch_related_m2m F→P, test_serialize_progressbar F→P, test_serialize_no_only_pk_with_natural_keys F→P, test_serialize_only_pk F→P, test_serialize_prefetch_related_m2m F→P, test_serialize_progressbar F→P, test_serialize_no_only_pk_with_natural_keys F→P, test_serialize_only_pk F→P, test_serialize_prefetch_related_m2m F→P, test_serialize_progressbar F→P | 369 |  |
 | `sympy__sympy-13647` | REPRODUCED | resolved | yes | test_col_insert F→P | 445 |  |

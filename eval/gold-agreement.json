@@ -1,14 +1,14 @@
 [
  {
   "agree": false,
-  "disk_free_gb": 112.2,
+  "disk_free_gb": 111.7,
   "exception": true,
   "instance_id": "django__django-15127",
   "official": "unresolved",
   "ours": "REPRODUCED",
   "ours_reason": "F\u2192P: tests/messages_tests/tests.py::TestLevelTags::test_override_settings_level_tags",
   "pass": true,
-  "seconds": 424,
+  "seconds": 856,
   "transitions": {
    "tests/messages_tests/tests.py::TestLevelTags::test_override_settings_level_tags": "F\u2192P"
   }
