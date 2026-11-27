@@ -57,3 +57,20 @@ def test_allocation_is_largest_remainder() -> None:
     m = _script()
     q = m.allocate({"a": 216, "b": 73, "c": 4, "d": 1}, 10)
     assert sum(q.values()) == 10 and q["a"] == 7 and q["b"] == 3 and q["c"] == 0
+
+
+def test_exclusions_give_the_runnable_samples() -> None:
+    """D-M7-6: dev_13 and test_47 are the pre-registered lists minus the gold-check
+    exclusions, each of which has a reason and belongs to the sample it names."""
+    import yaml
+
+    m = _script()
+    exc = yaml.safe_load((ROOT / "eval" / "gold-exclusions.yaml").read_text())
+    assert exc and all(e["reason"] and e["sample"] in ("dev_15", "test_50") for e in exc.values())
+    dev, test = _read("dev_15.txt"), _read("test_50.txt")
+    for iid, e in exc.items():
+        assert iid in (dev if e["sample"] == "dev_15" else test), iid
+    dev_run, test_run = m.apply_exclusions(dev, test, set(exc))
+    assert _read("dev_13.txt") == dev_run and _read("test_47.txt") == test_run
+    assert dev_run == [i for i in dev if i not in exc]  # order kept
+    assert not set(dev_run + test_run) & set(exc)

@@ -94,13 +94,13 @@ def test_t7_4_cli_refuses_before_anything_runs(tmp_path: Path,
 
 
 def test_committed_dev_configs_stay_off_test(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Every dev-*.yaml is split: dev, lists only Dev instances, and runs without --final."""
+    """Every dev-*.yaml is split: dev, lists exactly the runnable Dev instances, no --final."""
     monkeypatch.chdir(ROOT)
-    dev15 = set((ROOT / "eval" / "samples" / "dev_15.txt").read_text().split())
+    dev13 = set((ROOT / "eval" / "samples" / "dev_13.txt").read_text().split())
     configs = sorted((ROOT / "eval" / "configs").glob("dev-*.yaml"))
     assert configs
     for path in configs:
         cfg = EvalConfig.from_yaml(path)
         ids = cfg.instance_ids()
-        assert cfg.split == "dev" and ids is not None and set(ids) == dev15, path.name
+        assert cfg.split == "dev" and ids is not None and set(ids) == dev13, path.name
         check_access(cfg, ids, final=False, test_sample=TEST50, frozen=lambda: (False, ""))

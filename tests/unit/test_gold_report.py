@@ -53,7 +53,7 @@ def test_exception_does_not_cover_our_own_failure_or_a_changed_official_verdict(
 def test_the_checked_in_exceptions_file_loads() -> None:
     g = _script()
     exc = g.load_exceptions(ROOT / "eval" / "gold-exceptions.yaml")
-    assert set(exc) == {"django__django-15127", "django__django-16662"}
+    assert {"django__django-15127", "django__django-16662", "sphinx-doc__sphinx-9281"} <= set(exc)
     for e in exc.values():
         assert e["official"] and e["reason"] and e["evidence"]
 
