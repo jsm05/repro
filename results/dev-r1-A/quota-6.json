@@ -1,11 +1,11 @@
 {
  "nvidia/mistral-large-4": {
   "day": "2026-11-27",
-  "day_requests": 56,
-  "day_tokens": 234023,
+  "day_requests": 71,
+  "day_tokens": 272931,
   "exhausted_until": null,
   "month": "2026-11",
-  "month_tokens": 234023,
+  "month_tokens": 272931,
   "reported_remaining": null
  }
 }
