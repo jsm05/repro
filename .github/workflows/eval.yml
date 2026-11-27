@@ -120,7 +120,8 @@ jobs:
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
           if [ -n "$DOCKERHUB_USERNAME" ]; then
-            echo "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+            echo "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin \
+              || echo "::warning::Docker Hub login failed (check the DOCKERHUB_* secrets); continuing with anonymous pulls"
           else
             echo "no Docker Hub secrets: anonymous pulls"
           fi
