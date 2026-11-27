@@ -5,7 +5,7 @@ config_id: dev-A-main
 kind: agent
 dataset: swtbench
 split: dev
-instances_file: eval/samples/dev_15.txt
+instances_file: eval/samples/dev_13.txt
 logical_model: primary
 policy: pinned
 llm: live

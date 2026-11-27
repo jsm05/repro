@@ -11,6 +11,9 @@ regenerates both files exactly (T7.1). The pilot may overlap either list, since 
 runs on pilot instances.
 
     python scripts/make_splits.py
+
+Instances that fail the gold check are listed in eval/gold-exclusions.yaml and dropped
+into dev_13.txt and test_47.txt (D-M7-6); dev_15/test_50 stay as pre-registered.
 """
 
 from __future__ import annotations
@@ -64,12 +67,27 @@ def make_splits(verified: list[str]) -> tuple[list[str], list[str]]:
     return dev, test
 
 
+def apply_exclusions(dev: list[str], test: list[str],
+                     excluded: set[str]) -> tuple[list[str], list[str]]:
+    """The runnable samples: the pre-registered lists minus instances that failed the gold
+    check (eval/gold-exclusions.yaml), order kept. dev_15/test_50 themselves never change."""
+    return [i for i in dev if i not in excluded], [i for i in test if i not in excluded]
+
+
 def main() -> int:
     verified = (SAMPLES / "verified_ids.txt").read_text().split()
     dev, test = make_splits(verified)
     (SAMPLES / "dev_15.txt").write_text("\n".join(dev) + "\n")
     (SAMPLES / "test_50.txt").write_text("\n".join(test) + "\n")
-    for name, ids in (("dev_15", dev), ("test_50", test)):
+    import yaml
+
+    excl = SAMPLES.parent / "gold-exclusions.yaml"
+    excluded = set(yaml.safe_load(excl.read_text()) or {}) if excl.exists() else set()
+    dev_run, test_run = apply_exclusions(dev, test, excluded)
+    (SAMPLES / f"dev_{len(dev_run)}.txt").write_text("\n".join(dev_run) + "\n")
+    (SAMPLES / f"test_{len(test_run)}.txt").write_text("\n".join(test_run) + "\n")
+    for name, ids in (("dev_15", dev), ("test_50", test), ("dev run", dev_run),
+                      ("test run", test_run)):
         mix = Counter(repo_of(i) for i in ids)
         print(name, dict(sorted(mix.items(), key=lambda kv: -kv[1])))
     return 0

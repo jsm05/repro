@@ -1,0 +1,21 @@
+# Instances dropped from Dev and Test before any model run (EVAL section 6, D-M7-6).
+# Each one fails the gold check on BOTH harnesses: with the real fix applied, the gold
+# test does not pass in the instance's own environment, so no generated test could either.
+# The cause is environment drift: the images are built today, with packages newer than
+# the ones SWE-bench was made against.
+
+matplotlib__matplotlib-23476:
+  sample: dev_15
+  reason: "With the gold fix applied, 48 of 106 tests in test_figure.py fail with DeprecationWarnings, the gold test among them (F→F). Official: unresolved."
+matplotlib__matplotlib-24637:
+  sample: test_50
+  reason: "Dozens of tests in test_backend_svg.py fail under the gold fix with DeprecationWarnings, the gold test among them (F→F). Official: unresolved."
+matplotlib__matplotlib-23412:
+  sample: test_50
+  reason: "Dozens of tests in test_patches.py fail under the gold fix with DeprecationWarnings, the gold test among them (F→F). Official: unresolved."
+sphinx-doc__sphinx-8721:
+  sample: dev_15
+  reason: "pytest cannot import its sphinx.testing.fixtures plugin: No module named 'pkg_resources', so the test errors before and after (E→E). Official: unresolved."
+sphinx-doc__sphinx-8548:
+  sample: test_50
+  reason: "Same pkg_resources import error: the test errors before and after (E→E). Official: unresolved."

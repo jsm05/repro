@@ -1,18 +1,90 @@
-# Explained exceptions for gold agreement (T6.D8, D-M6-19).
+# Explained exceptions for gold agreement (T6.D8, D-M6-19, D-M7-6).
 # An entry counts only while our oracle says REPRODUCED and the official harness still
 # gives exactly the verdict recorded here. If either changes, the entry stops applying.
 
 django__django-15127:
   official: unresolved
   reason: >-
-    The official harness's Django parser read a pip install line as a test. Its base run
-    lists a PASS_TO_FAIL "test" named
-    "testbed/lib/python3.9/site-packages (from Django==4.1.dev20211125193604)", and that
-    alone marks the instance unresolved. The gold test itself goes F→P in its own report.
+    Our oracle shows the gold test going F→P, and so does the official harness's own
+    prediction run (its tests_pred.FAIL_TO_PASS contains the gold test). Its resolved flag
+    is still False because its base run lists a fail-to-pass test the gold run does not
+    (for example test_eq on 15127), and it also lists a pip install line
+    ("testbed/lib/python3.x/site-packages (from Django==...)") as a test. Why its base
+    run behaves that way is not diagnosed.
   evidence: >-
-    run_instance_swt_logs/gold-django__django-15127/gold/django__django-15127/report.json:
-    tests_base.PASS_TO_FAIL is the pip line; tests_pred.FAIL_TO_PASS has
-    test_override_settings_level_tags (messages_tests.tests.TestLevelTags).
+    summary of report.json in the docker-tests run log for this instance
+    (runs 45871221161, 45871297161, 45974937049): tests_base.FAIL_TO_PASS differs from
+    tests_pred.FAIL_TO_PASS, and tests_pred.FAIL_TO_PASS holds the gold test.
+
+django__django-14771:
+  official: unresolved
+  reason: >-
+    Our oracle shows the gold test going F→P, and so does the official harness's own
+    prediction run (its tests_pred.FAIL_TO_PASS contains the gold test). Its resolved flag
+    is still False because its base run lists a fail-to-pass test the gold run does not
+    (for example test_eq on 15127), and it also lists a pip install line
+    ("testbed/lib/python3.x/site-packages (from Django==...)") as a test. Why its base
+    run behaves that way is not diagnosed.
+  evidence: >-
+    summary of report.json in the docker-tests run log for this instance
+    (runs 45871221161, 45871297161, 45974937049): tests_base.FAIL_TO_PASS differs from
+    tests_pred.FAIL_TO_PASS, and tests_pred.FAIL_TO_PASS holds the gold test.
+
+django__django-13297:
+  official: unresolved
+  reason: >-
+    Our oracle shows the gold test going F→P, and so does the official harness's own
+    prediction run (its tests_pred.FAIL_TO_PASS contains the gold test). Its resolved flag
+    is still False because its base run lists a fail-to-pass test the gold run does not
+    (for example test_eq on 15127), and it also lists a pip install line
+    ("testbed/lib/python3.x/site-packages (from Django==...)") as a test. Why its base
+    run behaves that way is not diagnosed.
+  evidence: >-
+    summary of report.json in the docker-tests run log for this instance
+    (runs 45871221161, 45871297161, 45974937049): tests_base.FAIL_TO_PASS differs from
+    tests_pred.FAIL_TO_PASS, and tests_pred.FAIL_TO_PASS holds the gold test.
+
+django__django-11119:
+  official: unresolved
+  reason: >-
+    Our oracle shows the gold test going F→P, and so does the official harness's own
+    prediction run (its tests_pred.FAIL_TO_PASS contains the gold test). Its resolved flag
+    is still False because its base run lists a fail-to-pass test the gold run does not
+    (for example test_eq on 15127), and it also lists a pip install line
+    ("testbed/lib/python3.x/site-packages (from Django==...)") as a test. Why its base
+    run behaves that way is not diagnosed.
+  evidence: >-
+    summary of report.json in the docker-tests run log for this instance
+    (runs 45871221161, 45871297161, 45974937049): tests_base.FAIL_TO_PASS differs from
+    tests_pred.FAIL_TO_PASS, and tests_pred.FAIL_TO_PASS holds the gold test.
+
+django__django-16485:
+  official: unresolved
+  reason: >-
+    Our oracle shows the gold test going F→P, and so does the official harness's own
+    prediction run (its tests_pred.FAIL_TO_PASS contains the gold test). Its resolved flag
+    is still False because its base run lists a fail-to-pass test the gold run does not
+    (for example test_eq on 15127), and it also lists a pip install line
+    ("testbed/lib/python3.x/site-packages (from Django==...)") as a test. Why its base
+    run behaves that way is not diagnosed.
+  evidence: >-
+    summary of report.json in the docker-tests run log for this instance
+    (runs 45871221161, 45871297161, 45974937049): tests_base.FAIL_TO_PASS differs from
+    tests_pred.FAIL_TO_PASS, and tests_pred.FAIL_TO_PASS holds the gold test.
+
+django__django-16502:
+  official: unresolved
+  reason: >-
+    Our oracle shows the gold test going F→P, and so does the official harness's own
+    prediction run (its tests_pred.FAIL_TO_PASS contains the gold test). Its resolved flag
+    is still False because its base run lists a fail-to-pass test the gold run does not
+    (for example test_eq on 15127), and it also lists a pip install line
+    ("testbed/lib/python3.x/site-packages (from Django==...)") as a test. Why its base
+    run behaves that way is not diagnosed.
+  evidence: >-
+    summary of report.json in the docker-tests run log for this instance
+    (runs 45871221161, 45871297161, 45974937049): tests_base.FAIL_TO_PASS differs from
+    tests_pred.FAIL_TO_PASS, and tests_pred.FAIL_TO_PASS holds the gold test.
 
 django__django-16662:
   official: unresolved
@@ -26,3 +98,21 @@ django__django-16662:
     shows "test_sorted_imports (migrations.test_writer.WriterTests.test_sorted_imports)"
     then "#24155 - Tests ordering of imports. ... ok"; report.json has no FAIL_TO_PASS
     entry for it.
+
+sphinx-doc__sphinx-9281:
+  official: unresolved
+  reason: >-
+    Our oracle shows the gold test going F→P. The official harness's own run crashes in
+    this image with "No module named 'pkg_resources'" (its test_output.txt), so it cannot
+    resolve anything here.
+  evidence: >-
+    run_instance_swt_logs/gold-sphinx-doc__sphinx-9281/pred_post__gold/.../test_output.txt
+    (docker-tests run 45667350141).
+
+sphinx-doc__sphinx-9658:
+  official: unresolved
+  reason: >-
+    Same as 9281: our oracle shows F→P; the official run dies on the pkg_resources import.
+  evidence: >-
+    run_instance_swt_logs/gold-sphinx-doc__sphinx-9658/pred_post__gold/.../test_output.txt
+    (docker-tests run 45667350141).
