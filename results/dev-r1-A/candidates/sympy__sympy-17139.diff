@@ -1,0 +1,15 @@
+diff --git a/sympy/simplify/tests/test_fu.py b/sympy/simplify/tests/test_fu.py
+--- a/sympy/simplify/tests/test_fu.py
++++ b/sympy/simplify/tests/test_fu.py
+@@ -438,3 +438,11 @@
+     assert as_f_sign_1(2*x + 2) == (2, x, 1)
+     assert as_f_sign_1(x*y - y) == (y, x, -1)
+     assert as_f_sign_1(-x*y + y) == (-y, x, -1)
++
++
++def test_TR56_complex_exponent():
++    # complex exponents must not raise "Invalid comparison of complex I"
++    assert TR5(sin(x)**I) == sin(x)**I
++    assert TR6(cos(x)**I) == cos(x)**I
++    assert TR5(sin(x)**(1 + I)) == sin(x)**(1 + I)
++    assert TR6(cos(x)**(1 + I)) == cos(x)**(1 + I)
