@@ -1,0 +1,42 @@
+diff --git a/tests/utils_tests/test_autoreload_xoptions.py b/tests/utils_tests/test_autoreload_xoptions.py
+new file mode 100644
+--- /dev/null
++++ b/tests/utils_tests/test_autoreload_xoptions.py
+@@ -0,0 +1,37 @@
++import sys
++from unittest import mock
++
++from django.test import SimpleTestCase
++from django.utils import autoreload
++
++
++class TestChildArgumentsXOptions(SimpleTestCase):
++    @mock.patch('__main__.__spec__', None)
++    @mock.patch('sys.argv', [__file__, 'runserver'])
++    @mock.patch('sys.warnoptions', [])
++    @mock.patch('sys._xoptions', {'utf8': True})
++    def test_xoptions_are_passed_to_child(self):
++        self.assertEqual(
++            autoreload.get_child_arguments(),
++            [sys.executable, '-X', 'utf8', __file__, 'runserver'],
++        )
++
++    @mock.patch('__main__.__spec__', None)
++    @mock.patch('sys.argv', [__file__, 'runserver'])
++    @mock.patch('sys.warnoptions', [])
++    @mock.patch('sys._xoptions', {'utf8': True, 'dev': True})
++    def test_multiple_xoptions_are_passed_to_child(self):
++        self.assertEqual(
++            autoreload.get_child_arguments(),
++            [sys.executable, '-X', 'utf8', '-X', 'dev', __file__, 'runserver'],
++        )
++
++    @mock.patch('__main__.__spec__', None)
++    @mock.patch('sys.argv', [__file__, 'runserver'])
++    @mock.patch('sys.warnoptions', [])
++    @mock.patch('sys._xoptions', {})
++    def test_no_xoptions(self):
++        self.assertEqual(
++            autoreload.get_child_arguments(),
++            [sys.executable, __file__, 'runserver'],
++        )

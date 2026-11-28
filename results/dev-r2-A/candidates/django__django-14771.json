@@ -1,0 +1,1 @@
+{"origin": "agent", "test_ids": ["tests/utils_tests/test_autoreload_xoptions.py::TestChildArgumentsXOptions::test_xoptions_are_passed_to_child", "tests/utils_tests/test_autoreload_xoptions.py::TestChildArgumentsXOptions::test_multiple_xoptions_are_passed_to_child", "tests/utils_tests/test_autoreload_xoptions.py::TestChildArgumentsXOptions::test_no_xoptions"]}
