@@ -1,0 +1,45 @@
+diff --git a/tests/model_fields/test_imagefield.py b/tests/model_fields/test_imagefield.py
+--- a/tests/model_fields/test_imagefield.py
++++ b/tests/model_fields/test_imagefield.py
+@@ -461,3 +461,41 @@
+         # Dimensions were recalculated, and hence file should have opened.
+         self.assertIs(p.mugshot.was_opened, True)
+         self.assertIs(p.headshot.was_opened, True)
++
++
++class ImageFieldPostInitSignalTests(TestCase):
++    """
++    ImageField should only connect its update_dimension_fields method to the
++    post_init signal when width_field/height_field are set; otherwise the
++    handler is a noop and only slows down model initialization.
++    """
++
++    def _post_init_receivers(self, model):
++        from django.db.models.signals import post_init
++
++        sync_receivers, _async_receivers = post_init._live_receivers(model)
++        return sync_receivers
++
++    def test_no_dimension_fields_no_post_init_receiver(self):
++        field = Person._meta.get_field("mugshot")
++        self.assertIsNone(field.width_field)
++        self.assertIsNone(field.height_field)
++        self.assertNotIn(
++            field.update_dimension_fields, self._post_init_receivers(Person)
++        )
++
++    def test_dimension_fields_post_init_receiver_connected(self):
++        field = PersonWithHeightAndWidth._meta.get_field("mugshot")
++        self.assertIsNotNone(field.width_field)
++        self.assertIsNotNone(field.height_field)
++        self.assertIn(
++            field.update_dimension_fields,
++            self._post_init_receivers(PersonWithHeightAndWidth),
++        )
++
++    def test_one_dimension_field_post_init_receiver_connected(self):
++        field = PersonWithHeight._meta.get_field("mugshot")
++        self.assertIsNotNone(field.height_field)
++        self.assertIn(
++            field.update_dimension_fields, self._post_init_receivers(PersonWithHeight)
++        )
