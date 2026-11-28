@@ -147,7 +147,15 @@ class OpenAICompatClient:
         text = (choice.message.content or "") if choice is not None else ""
         source = "content"
         raw_note = ""
-        if choice is not None and not text.strip():
+        msg_calls = (getattr(choice.message, "tool_calls", None) or []) if choice else []
+        if choice is not None and msg_calls and "```action" not in text:
+            # Prose in content next to a real tool call: the call is the action (D-M7-8).
+            raw_note = json.dumps(choice.message.model_dump(exclude_none=True),
+                                  default=str)[:2000]
+            call_text = action_from_tool_call(msg_calls[0])
+            text, source = (f"{text.strip()}\n{call_text}" if text.strip() else call_text,
+                            "tool_call")
+        elif choice is not None and not text.strip():
             msg = choice.message
             raw_note = json.dumps(msg.model_dump(exclude_none=True), default=str)[:2000]
             calls = getattr(msg, "tool_calls", None) or []

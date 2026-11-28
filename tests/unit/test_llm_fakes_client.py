@@ -149,6 +149,27 @@ def test_native_tool_call_becomes_a_text_action() -> None:
     assert '"cmd": "ls"' in resp.text and "tool_calls" in resp.raw_note
 
 
+def test_tool_call_next_to_prose_is_used() -> None:
+    """D-M7-8: the model sometimes writes prose in content AND makes a tool call. The call
+    is the action (77 parse errors in Dev round 2); prose that holds its own action wins."""
+    call = [{"id": "c1", "type": "function",
+             "function": {"name": "view", "arguments": '{"path": "a.py"}'}}]
+    own = '```action\n{"tool": "bash", "args": {"cmd": "ls"}}\n```'
+    with FakeProvider() as fp:
+        r = ok(text="Let me look at the file first.", completion_tokens=29)
+        r.body["choices"][0]["message"]["tool_calls"] = call
+        r.body["choices"][0]["finish_reason"] = "tool_calls"
+        r2 = ok(text=own, completion_tokens=29)
+        r2.body["choices"][0]["message"]["tool_calls"] = call
+        fp.push(r, r2)
+        client = OpenAICompatClient(_route(), fp.base_url, TEST_KEY)
+        first = client.complete(MSGS, max_tokens=50)
+        second = client.complete(MSGS, max_tokens=50)
+    assert first.text_source == "tool_call" and '"tool": "view"' in first.text
+    assert "Let me look at the file first." in first.text  # prose kept for the history
+    assert second.text_source == "content" and second.text == own
+
+
 def test_tools_sent_only_to_native_tool_routes() -> None:
     """D-M5-13: tool schemas go out only on routes marked native_tools."""
     from repro.agent.tools import TOOL_SCHEMAS
