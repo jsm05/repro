@@ -1,0 +1,59 @@
+diff --git a/tests/utils_tests/test_autoreload.py b/tests/utils_tests/test_autoreload.py
+--- a/tests/utils_tests/test_autoreload.py
++++ b/tests/utils_tests/test_autoreload.py
+@@ -815,3 +815,55 @@
+             snapshot = list(self.reloader.snapshot_files())
+             self.assertEqual(len(snapshot), 1)
+             self.assertEqual(snapshot[0][0], self.existing_file)
++
++
++class TestChildArgumentsXOptions(SimpleTestCase):
++    """
++    The auto-reloader must pass CPython's -X options (sys._xoptions) to the
++    child process so that e.g. ``python -X utf8 manage.py runserver`` keeps
++    the same interpreter configuration after a reload.
++    """
++    @mock.patch.dict(sys.modules, {'__main__': django.__main__})
++    @mock.patch('sys.argv', [django.__main__.__file__, 'runserver'])
++    @mock.patch('sys.warnoptions', [])
++    @mock.patch.object(sys, '_xoptions', {'utf8': True, 'int_max_str_digits': '640'})
++    def test_xoptions_run_as_module(self):
++        self.assertEqual(
++            autoreload.get_child_arguments(),
++            [
++                sys.executable,
++                '-Xutf8',
++                '-Xint_max_str_digits=640',
++                '-m', 'django', 'runserver',
++            ]
++        )
++
++    @mock.patch('__main__.__spec__', None)
++    @mock.patch('sys.argv', [__file__, 'runserver'])
++    @mock.patch('sys.warnoptions', [])
++    @mock.patch.object(sys, '_xoptions', {'utf8': True})
++    def test_xoptions_run_as_script(self):
++        self.assertEqual(
++            autoreload.get_child_arguments(),
++            [sys.executable, '-Xutf8', __file__, 'runserver']
++        )
++
++    @mock.patch('__main__.__spec__', None)
++    @mock.patch('sys.argv', [__file__, 'runserver'])
++    @mock.patch('sys.warnoptions', ['error'])
++    @mock.patch.object(sys, '_xoptions', {'utf8': True})
++    def test_xoptions_combined_with_warnoptions(self):
++        self.assertEqual(
++            autoreload.get_child_arguments(),
++            [sys.executable, '-Werror', '-Xutf8', __file__, 'runserver']
++        )
++
++    @mock.patch('__main__.__spec__', None)
++    @mock.patch('sys.argv', [__file__, 'runserver'])
++    @mock.patch('sys.warnoptions', [])
++    @mock.patch.object(sys, '_xoptions', {})
++    def test_no_xoptions(self):
++        self.assertEqual(
++            autoreload.get_child_arguments(),
++            [sys.executable, __file__, 'runserver']
++        )
