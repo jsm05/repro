@@ -1,0 +1,20 @@
+diff --git a/sympy/printing/tests/test_mathml.py b/sympy/printing/tests/test_mathml.py
+--- a/sympy/printing/tests/test_mathml.py
++++ b/sympy/printing/tests/test_mathml.py
+@@ -962,3 +962,16 @@
+     R = RandomSymbol(Symbol('R'))
+     assert mpp.doprint(R) == '<mi>R</mi>'
+     assert mp.doprint(R) == '<ci>R</ci>'
++
++
++def test_presentation_symbol_ending_with_number():
++    # A symbol whose name ends with digits (e.g. x2) must be printed as a
++    # single identifier, not split into a subscript (which renders the digit
++    # invisibly in some MathML renderers). See issue about x2 being invisible.
++    out = mathml(Symbol("x2"), printer='presentation')
++    assert out == '<mi>x2</mi>', out
++
++    x2, z = Symbol('x2'), Symbol('z')
++    out = mathml(x2*z + x2**3, printer='presentation')
++    assert '<msub>' not in out, out
++    assert '<mi>x2</mi>' in out, out
