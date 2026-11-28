@@ -1,0 +1,17 @@
+diff --git a/sympy/simplify/tests/test_sqrtdenest.py b/sympy/simplify/tests/test_sqrtdenest.py
+--- a/sympy/simplify/tests/test_sqrtdenest.py
++++ b/sympy/simplify/tests/test_sqrtdenest.py
+@@ -183,3 +183,13 @@
+ 
+ def test_sqrt_ratcomb():
+     assert sqrtdenest(sqrt(1 + r3) + sqrt(3 + 3*r3) - sqrt(10 + 6*r3)) == 0
++
++
++def test_issue_12420():
++    # expressions that cannot be denested should be returned unchanged
++    # instead of raising IndexError
++    from sympy import I
++    assert sqrtdenest(sqrt(3 + I)) == sqrt(3 + I)
++    assert sqrtdenest(sqrt(2 + 3*I)) == sqrt(2 + 3*I)
++    e = (3 - sqrt(2)*sqrt(4 + 3*I, evaluate=False) + 3*I)/2
++    assert sqrtdenest(e) == e
