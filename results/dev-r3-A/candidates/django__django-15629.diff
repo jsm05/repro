@@ -1,0 +1,66 @@
+diff --git a/tests/schema/test_collation_fk.py b/tests/schema/test_collation_fk.py
+new file mode 100644
+--- /dev/null
++++ b/tests/schema/test_collation_fk.py
+@@ -0,0 +1,61 @@
++from django.db import connection
++from django.db.models import CASCADE, AutoField, CharField, ForeignKey, Model
++from django.test import TransactionTestCase
++from django.test.utils import isolate_apps
++
++
++class ForeignKeyCollationPropagationTests(TransactionTestCase):
++    """
++    Altering the collation of a primary key must propagate to the columns of
++    foreign keys referencing it, otherwise the recreated foreign key
++    constraints fail (e.g. on MySQL where the collations must match).
++    """
++
++    def test_alter_pk_db_collation_propagates_to_fk_column(self):
++        collation = connection.features.test_collations.get("non_default", "nocase")
++
++        with isolate_apps("schema"):
++            class Account(Model):
++                id = AutoField(primary_key=True)
++
++                class Meta:
++                    app_label = "schema"
++
++            class Profile(Model):
++                account = ForeignKey(Account, on_delete=CASCADE)
++
++                class Meta:
++                    app_label = "schema"
++
++            with connection.schema_editor() as editor:
++                editor.create_model(Account)
++                editor.create_model(Profile)
++
++            old_field = Account._meta.get_field("id")
++            new_field = CharField(
++                max_length=22, primary_key=True, db_collation=collation
++            )
++            new_field.set_attributes_from_name("id")
++            new_field.model = Account
++            with connection.schema_editor(collect_sql=True) as editor:
++                editor.alter_field(Account, old_field, new_field, strict=True)
++
++            # The referencing FK column must be recreated with the same
++            # collation as the referenced primary key.
++            fk_column_statements = [
++                sql
++                for sql in editor.collected_sql
++                if "account_id" in sql and "varchar(22)" in sql
++            ]
++            self.assertTrue(
++                fk_column_statements,
++                "No statement altering the FK column was generated: %s"
++                % editor.collected_sql,
++            )
++            for sql in fk_column_statements:
++                self.assertIn(
++                    "COLLATE",
++                    sql.upper(),
++                    "FK column statement is missing the collation of the "
++                    "referenced primary key: %s" % sql,
++                )

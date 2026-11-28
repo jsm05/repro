@@ -1,0 +1,1 @@
+{"origin": "agent", "test_ids": ["tests/schema/test_collation_fk.py::ForeignKeyCollationPropagationTests::test_alter_pk_db_collation_propagates_to_fk_column"]}
