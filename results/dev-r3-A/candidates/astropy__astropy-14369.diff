@@ -1,0 +1,70 @@
+diff --git a/astropy/io/ascii/tests/test_cds_composite_units.py b/astropy/io/ascii/tests/test_cds_composite_units.py
+new file mode 100644
+--- /dev/null
++++ b/astropy/io/ascii/tests/test_cds_composite_units.py
+@@ -0,0 +1,34 @@
++# Licensed under a 3-clause BSD style license - see LICENSE.rst
++
++"""Test that reading an MRT (CDS format) file with composite units
++preserves the order of the divisions, as in the original file."""
++
++from astropy import units as u
++from astropy.table import Table
++
++MRT = """Title:
++Authors:
++Table:
++================================================================================
++Byte-by-byte Description of file: tab.txt
++--------------------------------------------------------------------------------
++   Bytes Format Units          \t\tLabel      Explanations
++--------------------------------------------------------------------------------
++   1- 10 A10    ---            \t\tID         ID
++  12- 21 F10.5  10+3J/m/s/kpc2    \tSBCONT     Cont surface brightness
++  23- 32 F10.5  10-7J/s/kpc2 \t\tSBLINE     Line surface brightness
++--------------------------------------------------------------------------------
++ID0001     70.99200   38.51040      
++ID0001     13.05120   28.19240      
++ID0001     3.83610    10.98370      
++ID0001     1.99101    6.78822       
++ID0001     1.31142    5.01932      
++"""
++
++
++def test_cds_reader_composite_units():
++    dat = Table.read(MRT, format="ascii.cds")
++    assert dat["SBCONT"].unit == 1e3 * u.J / u.m / u.s / u.kpc**2
++    assert dat["SBLINE"].unit == 1e-7 * u.J / u.s / u.kpc**2
++    assert dat["SBCONT"].unit.decompose() == (1e3 * u.J / u.m / u.s / u.kpc**2).decompose()
++    assert dat["SBLINE"].unit.decompose() == (1e-7 * u.J / u.s / u.kpc**2).decompose()
+diff --git a/astropy/units/tests/test_cds_division_order.py b/astropy/units/tests/test_cds_division_order.py
+new file mode 100644
+--- /dev/null
++++ b/astropy/units/tests/test_cds_division_order.py
+@@ -0,0 +1,26 @@
++# Licensed under a 3-clause BSD style license - see LICENSE.rst
++
++"""Tests that composite CDS units with multiple divisions are parsed
++with the correct order of operations (left-associative division)."""
++
++import pytest
++
++from astropy import units as u
++
++
++@pytest.mark.parametrize(
++    "string, expected",
++    [
++        ("J/m/s/kpc2", u.J / u.m / u.s / u.kpc**2),
++        ("10+3J/m/s/kpc2", 1e3 * u.J / u.m / u.s / u.kpc**2),
++        ("10-7J/s/kpc2", 1e-7 * u.J / u.s / u.kpc**2),
++        ("erg/AA/s", u.erg / u.AA / u.s),
++        ("m/s/kg", u.m / u.s / u.kg),
++        ("km/s/Mpc", u.km / u.s / u.Mpc),
++    ],
++)
++def test_cds_multiple_divisions(string, expected):
++    parsed = u.Unit(string, format="cds")
++    assert parsed == expected
++    # The physical dimensions must match as well.
++    assert parsed.decompose() == expected.decompose()
