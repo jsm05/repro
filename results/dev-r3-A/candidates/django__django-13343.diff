@@ -1,0 +1,23 @@
+diff --git a/tests/model_fields/test_filefield.py b/tests/model_fields/test_filefield.py
+--- a/tests/model_fields/test_filefield.py
++++ b/tests/model_fields/test_filefield.py
+@@ -166,3 +166,19 @@
+ 
+         document = MyDocument(myfile='test_file.py')
+         self.assertEqual(document.myfile.field.model, MyDocument)
++
++
++    @isolate_apps('model_fields')
++    def test_deconstruct_callable_storage(self):
++        """
++        FileField.deconstruct() returns a reference to a callable storage
++        instead of evaluating it, so the storage can vary at runtime.
++        """
++        from django.core.files.storage import FileSystemStorage
++
++        def get_storage():
++            return FileSystemStorage()
++
++        field = models.FileField(storage=get_storage)
++        name, path, args, kwargs = field.deconstruct()
++        self.assertIs(kwargs['storage'], get_storage)
