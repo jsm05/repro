@@ -1,0 +1,1 @@
+{"origin": "agent", "test_ids": ["tests/model_fields/test_imagefield_post_init.py::ImageFieldPostInitSignalTests::test_no_post_init_receiver_without_dimension_fields", "tests/model_fields/test_imagefield_post_init.py::ImageFieldPostInitSignalTests::test_post_init_receiver_with_dimension_fields"]}
