@@ -68,6 +68,35 @@ class ToolResult:
     meta: dict[str, Any] = field(default_factory=dict)
 
 
+# Argument names the model keeps using instead of ours. Mapping them costs nothing and
+# keeps real mistakes (unknown arguments, wrong types) as errors (D-M7-7).
+ARG_ALIASES: dict[str, dict[str, str]] = {
+    "bash": {"command": "cmd", "script": "cmd", "shell_command": "cmd"},
+    "view": {"file": "path", "file_path": "path", "filename": "path", "start_line": "start",
+             "end_line": "end", "line_start": "start", "line_end": "end"},
+    "write_test": {"file": "path", "file_path": "path", "filename": "path", "text": "content"},
+}
+
+
+def normalize_args(tool: str, args: dict[str, Any], workdir: str) -> dict[str, Any]:
+    """Map known aliases to our names, make absolute paths inside the repo relative, and
+    unwrap a nested {"action": tool, "args": {...}}. Unknown keys are left for `_require`."""
+    out = dict(args)
+    if set(out) <= {"action", "args", "tool", "name"} and isinstance(out.get("args"), dict):
+        out = dict(out["args"])
+        if set(out) <= {"action", "args", "tool", "name"} and isinstance(out.get("args"), dict):
+            out = dict(out["args"])
+    aliases = ARG_ALIASES.get(tool, {})
+    for old, new in aliases.items():
+        if old in out and new not in out:
+            out[new] = out.pop(old)
+    root = workdir.rstrip("/") + "/"
+    p = out.get("path")
+    if tool in ("view", "write_test") and isinstance(p, str) and p.startswith(root):
+        out["path"] = p[len(root):]
+    return out
+
+
 def _require(args: dict[str, Any], spec: dict[str, tuple[type | tuple[type, ...], bool]]) -> None:
     unknown = set(args) - set(spec)
     if unknown:

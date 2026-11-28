@@ -16,7 +16,14 @@ from typing import Literal
 from repro.agent.context import Card, Context
 from repro.agent.prompts import PROMPTS
 from repro.agent.protocol import NUDGE, Action, ParseError, parse_action, repair_message
-from repro.agent.tools import TOOL_SCHEMAS, TOOLS, ToolError, ToolResult, Workspace
+from repro.agent.tools import (
+    TOOL_SCHEMAS,
+    TOOLS,
+    ToolError,
+    ToolResult,
+    Workspace,
+    normalize_args,
+)
 from repro.eval.trace import TraceRecorder
 from repro.llm.budget import BudgetExceeded
 from repro.llm.clock import Clock
@@ -144,6 +151,7 @@ class AgentLoop:
         tool, args = action.tool, action.args
         if tool not in TOOLS:
             raise ToolError(f"unknown tool {tool!r}; tools are {', '.join(TOOLS)}")
+        args = normalize_args(tool, args, self.ws.sandbox.workdir)
         if tool == "bash":
             r = self.ws.bash(args)
             self.card.searches.append(str(r.meta["cmd"])[:60])
