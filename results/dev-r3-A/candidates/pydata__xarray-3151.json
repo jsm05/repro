@@ -1,0 +1,1 @@
+{"origin": "agent", "test_ids": ["xarray/tests/test_combine_by_coords_nonmonotonic.py::TestCombineByCoordsNonMonotonicIdenticalCoords::test_identical_non_monotonic_coords_ignored"]}
