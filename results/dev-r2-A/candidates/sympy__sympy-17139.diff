@@ -1,0 +1,13 @@
+diff --git a/sympy/simplify/tests/test_issue_cos_pow_I.py b/sympy/simplify/tests/test_issue_cos_pow_I.py
+new file mode 100644
+--- /dev/null
++++ b/sympy/simplify/tests/test_issue_cos_pow_I.py
+@@ -0,0 +1,8 @@
++from sympy import I, Symbol, cos, simplify
++
++
++def test_simplify_cos_pow_I():
++    # simplify should not raise "Invalid comparison of complex I"
++    # when a trig function is raised to a complex power
++    x = Symbol('x')
++    assert simplify(cos(x)**I) == cos(x)**I
