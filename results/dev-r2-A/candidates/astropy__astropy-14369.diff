@@ -1,0 +1,74 @@
+diff --git a/astropy/units/tests/test_cds_composite_units.py b/astropy/units/tests/test_cds_composite_units.py
+new file mode 100644
+--- /dev/null
++++ b/astropy/units/tests/test_cds_composite_units.py
+@@ -0,0 +1,69 @@
++# Licensed under a 3-clause BSD style license - see LICENSE.rst
++"""Regression tests for parsing composite CDS units with multiple divisions.
++
++Units like ``10+3J/m/s/kpc2`` were parsed with the division order jumbled
++(e.g. ``1000 J s / (kpc2 m)`` instead of ``1000 J / (kpc2 m s)``).
++"""
++
++from astropy import units as u
++from astropy.table import Table
++from astropy.units.format import CDS
++
++
++def test_cds_division_10plus3J_m_s_kpc2():
++    parsed = CDS.parse("10+3J/m/s/kpc2")
++    expected = 1e3 * u.J / u.m / u.s / u.kpc**2
++    assert parsed == expected
++    assert parsed.decompose() == expected.decompose()
++
++
++def test_cds_division_10minus7J_s_kpc2():
++    parsed = CDS.parse("10-7J/s/kpc2")
++    expected = 1e-7 * u.J / u.s / u.kpc**2
++    assert parsed == expected
++    assert parsed.decompose() == expected.decompose()
++
++
++def test_cds_division_J_m_s():
++    parsed = CDS.parse("J/m/s")
++    expected = u.J / u.m / u.s
++    assert parsed == expected
++    assert parsed.decompose() == expected.decompose()
++
++
++def test_cds_division_erg_AA_s_kpc2():
++    parsed = CDS.parse("erg/AA/s/kpc2")
++    expected = u.erg / u.AA / u.s / u.kpc**2
++    assert parsed == expected
++    assert parsed.decompose() == expected.decompose()
++
++
++def test_cds_division_m_s_kg():
++    parsed = CDS.parse("m/s/kg")
++    expected = u.m / u.s / u.kg
++    assert parsed == expected
++    assert parsed.decompose() == expected.decompose()
++
++
++def test_cds_mrt_table_units(tmp_path):
++    """Units as they appear in an MRT (CDS format) file."""
++    mrt = """Title:
++Authors:
++Table:
++================================================================================
++Byte-by-byte Description of file: tab.txt
++--------------------------------------------------------------------------------
++   Bytes Format Units          \t\tLabel      Explanations
++--------------------------------------------------------------------------------
++   1- 10 A10    ---            \t\tID         ID
++  12- 21 F10.5  10+3J/m/s/kpc2    \tSBCONT     Cont surface brightness
++  23- 32 F10.5  10-7J/s/kpc2 \t\tSBLINE     Line surface brightness
++--------------------------------------------------------------------------------
++ID0001     70.99200   38.51040      
++ID0001     13.05120   28.19240      
++"""
++    path = tmp_path / "tab.txt"
++    path.write_text(mrt)
++    dat = Table.read(str(path), format="ascii.cds")
++    assert dat["SBCONT"].unit == 1e3 * u.J / u.m / u.s / u.kpc**2
++    assert dat["SBLINE"].unit == 1e-7 * u.J / u.s / u.kpc**2
