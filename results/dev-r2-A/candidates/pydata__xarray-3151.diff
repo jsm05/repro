@@ -1,0 +1,22 @@
+diff --git a/xarray/tests/test_combine.py b/xarray/tests/test_combine.py
+--- a/xarray/tests/test_combine.py
++++ b/xarray/tests/test_combine.py
+@@ -775,3 +775,18 @@
+                 Dataset({'foo': ('x', [1])})]
+         with pytest.warns(FutureWarning, match="supplied do not have global"):
+             auto_combine(objs)
++
++
++    def test_combine_by_coords_non_monotonic_identical_coords(self):
++        # identical (non-varying) coordinate dimensions should be ignored,
++        # even if they are not monotonic
++        # https://github.com/pydata/xarray/issues/3583
++        yCoord = ['a', 'c', 'b']
++        ds1 = Dataset({'data': (['x', 'y'], np.random.rand(3, 3))},
++                      coords={'x': [1, 2, 3], 'y': yCoord})
++        ds2 = Dataset({'data': (['x', 'y'], np.random.rand(4, 3))},
++                      coords={'x': [4, 5, 6, 7], 'y': yCoord})
++        actual = combine_by_coords([ds1, ds2])
++        assert actual.dims['x'] == 7
++        assert list(actual.coords['y'].values) == yCoord
++        assert_identical(actual['y'], ds1['y'])
