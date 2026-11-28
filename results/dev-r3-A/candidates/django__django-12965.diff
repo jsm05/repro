@@ -1,0 +1,29 @@
+diff --git a/tests/delete/test_delete_sql.py b/tests/delete/test_delete_sql.py
+new file mode 100644
+--- /dev/null
++++ b/tests/delete/test_delete_sql.py
+@@ -0,0 +1,24 @@
++from django.db import connection
++from django.test import TestCase
++from django.test.utils import CaptureQueriesContext
++
++from .models import User
++
++
++class FastDeleteSQLTests(TestCase):
++    """
++    Model.objects.all().delete() should issue a plain DELETE FROM without a
++    subquery (regression test: the subquery form breaks LOCK TABLES on MySQL
++    and is a performance regression).
++    """
++
++    def test_all_delete_generates_plain_delete(self):
++        User.objects.create()
++        with CaptureQueriesContext(connection) as ctx:
++            deleted, _rows = User.objects.all().delete()
++        self.assertEqual(deleted, 1)
++        self.assertEqual(len(ctx.captured_queries), 1)
++        sql = ctx.captured_queries[0]['sql'].upper()
++        self.assertTrue(sql.startswith('DELETE FROM'), sql)
++        self.assertNotIn('SELECT', sql, sql)
++        self.assertNotIn(' IN ', sql, sql)

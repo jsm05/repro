@@ -1,0 +1,1 @@
+{"origin": "agent", "test_ids": ["tests/delete/test_delete_sql.py::FastDeleteSQLTests::test_all_delete_generates_plain_delete"]}
