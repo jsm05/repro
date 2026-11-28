@@ -1,0 +1,1 @@
+{"origin": "agent", "test_ids": ["sympy/simplify/tests/test_issue_cos_pow_I.py::test_simplify_cos_pow_I_no_invalid_comparison"]}

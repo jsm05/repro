@@ -1,0 +1,21 @@
+diff --git a/sympy/simplify/tests/test_issue_cos_pow_I.py b/sympy/simplify/tests/test_issue_cos_pow_I.py
+new file mode 100644
+--- /dev/null
++++ b/sympy/simplify/tests/test_issue_cos_pow_I.py
+@@ -0,0 +1,16 @@
++from sympy import I, cos, simplify
++from sympy.abc import x
++
++
++def test_simplify_cos_pow_I_no_invalid_comparison():
++    # simplify(cos(x)**I) raised
++    # "TypeError: Invalid comparison of complex I" from fu.py _TR56
++    raised = None
++    try:
++        result = simplify(cos(x)**I)
++    except TypeError as e:
++        raised = e
++        result = None
++    assert raised is None, (
++        "simplify(cos(x)**I) raised TypeError: %s" % raised)
++    assert result == cos(x)**I
