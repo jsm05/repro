@@ -1,0 +1,33 @@
+diff --git a/tests/model_inheritance/tests.py b/tests/model_inheritance/tests.py
+--- a/tests/model_inheritance/tests.py
++++ b/tests/model_inheritance/tests.py
+@@ -522,3 +522,29 @@
+         msg = 'Grand parent with this First name and Last name already exists.'
+         with self.assertRaisesMessage(ValidationError, msg):
+             grand_child.validate_unique()
++
++
++class InheritancePKResetTests(TestCase):
++    def test_save_with_parent_pk_reset_to_none_inserts_new_object(self):
++        """
++        Setting the primary key of a parent model to None on a child
++        instance and saving it should insert a new row instead of
++        overwriting the existing one.
++        """
++        grand_child = GrandChild.objects.create(
++            first_name='foo', last_name='bar', email='foo@example.com',
++        )
++        original_pk = grand_child.pk
++        # Fetch a fresh instance and reset the parent's primary key.
++        obj = GrandChild.objects.get(pk=original_pk)
++        obj.id = None
++        obj.save()
++        # A new object must have been created, leaving the original intact.
++        self.assertNotEqual(obj.pk, original_pk)
++        self.assertIsNotNone(obj.pk)
++        self.assertEqual(GrandParent.objects.count(), 2)
++        self.assertEqual(GrandChild.objects.count(), 2)
++        self.assertTrue(GrandParent.objects.filter(pk=original_pk).exists())
++        self.assertTrue(GrandChild.objects.filter(pk=original_pk).exists())
++        # The new object is reachable through the child manager.
++        self.assertTrue(GrandChild.objects.filter(pk=obj.pk).exists())

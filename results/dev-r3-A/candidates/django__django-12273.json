@@ -1,0 +1,1 @@
+{"origin": "agent", "test_ids": ["tests/model_inheritance/tests.py::InheritancePKResetTests::test_save_with_parent_pk_reset_to_none_inserts_new_object"]}
