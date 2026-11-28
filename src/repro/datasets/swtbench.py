@@ -187,8 +187,15 @@ class ContainerRepo:
 
     def list_files(self) -> list[str]:
         if self._files is None:
-            res = self._box().exec(["git", "ls-files"], timeout_s=120)
-            self._files = sorted(x for x in res.stdout.splitlines() if x)
+            # exec's output is capped (16 KB, middle cut), which drops files in big repos,
+            # so the listing goes through a scratch file instead (D-M7-9).
+            box = self._box()
+            scratch = ".repro/files.txt"
+            box.put_file(scratch, "")
+            box.exec(f"git ls-files > {scratch}", timeout_s=120)
+            listing = box.get_file(scratch).decode("utf-8", errors="replace")
+            box.delete_file(scratch)
+            self._files = sorted(x for x in listing.splitlines() if x)
         return self._files
 
     def read(self, path: str) -> str:

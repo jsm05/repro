@@ -516,3 +516,29 @@ def test_harness_run_reads_the_whole_log_not_the_capped_exec_output(tmp_path: Pa
                                 hash_seed=0, trace=False)
     assert len(res.outcomes) == 600
     assert res.outcomes["tests/app/test_big.py::C::test_0300"].status is TestStatus.PASSED
+
+
+def test_container_repo_lists_every_file_past_the_exec_cap(tmp_path: Path) -> None:
+    """D-M7-9: `git ls-files` through exec was cut at 16 KB with the middle dropped, so big
+    repos (django) lost files; the agent then saw existing test files as new (G0)."""
+    import subprocess
+
+    from repro.datasets.swtbench import ContainerRepo
+    from repro.sandbox.local import local_factory
+
+    repo = tmp_path / "big"
+    for i in range(1500):
+        d = repo / "pkg" / f"mod{i % 50}"
+        d.mkdir(parents=True, exist_ok=True)
+        (d / f"some_fairly_long_file_name_{i}.py").write_text("x = 1\n")
+    git = ["git", "-C", str(repo), "-c", "user.name=t", "-c", "user.email=t@t",
+           "-c", "commit.gpgsign=false"]
+    subprocess.run([*git, "init", "-q"], check=True)
+    subprocess.run([*git, "add", "-A"], check=True)
+    subprocess.run([*git, "commit", "-qm", "c"], check=True)
+    rp = ContainerRepo(local_factory(repo))
+    files = rp.list_files()
+    rp.close()
+    assert len(files) == 1500 and not any("truncated" in f for f in files)
+    assert "pkg/mod7/some_fairly_long_file_name_757.py" in files
+    assert not any(f.startswith(".repro") for f in files)
