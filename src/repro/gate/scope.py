@@ -283,7 +283,9 @@ def check_scope(
         added = f.added_lines()
         for ln in added:
             if any(p.search(ln) for p in SKIP_PATTERNS):
-                return no(f"{path}: skip/xfail markers are not allowed: {ln.strip()[:80]!r}")
+                return no(f"{path}: skip/xfail markers are not allowed: {ln.strip()[:80]!r} "
+                          "(your own test must run unconditionally; do not copy a skip "
+                          "decorator from a neighbouring test)")
         original = read_original(path)
         if f.is_new:
             if original is not None:
