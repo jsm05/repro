@@ -526,3 +526,25 @@ def test_lenient_action_forms() -> None:
         parse_action('{"tool": "bash", "args": {}} then {"tool": "submit", "args": {}}')
     with pytest.raises(ParseError):
         parse_action('a dict without the key: {"cmd": "ls"}')
+
+
+def test_d_m7_7_argument_aliases_the_model_actually_uses(tmp_path: Path) -> None:
+    """D-M7-7: Dev round 1 lost 106 calls to `command` for `cmd`. Known aliases, absolute
+    repo paths and a nested {action, args} are accepted; anything else stays an error."""
+    nested = "```action\n" + json.dumps({"tool": "bash", "args": {
+        "action": "bash", "args": {"cmd": "ls"}}}) + "\n```"
+    script = [act("bash", command="ls"),
+              act("view", file_path="/testbed/pager/pages.py", start_line=1, end_line=3),
+              nested,
+              act("bash", cmd="ls", timeout=5),  # unknown extra argument: still an error
+              act("abstain", reason="done")]
+    with harness(tmp_path, script) as h:
+        wd = h.ws.sandbox.workdir
+        h.fake._script[1] = act("view", file_path=f"{wd}/pager/pages.py", start_line=1,
+                                end_line=3)
+        res = h.run()
+        prompts = h.prompts()
+    assert res.state == "ABSTAINED"
+    assert "unexpected argument" not in prompts[1] and "pages.py lines 1-3" in prompts[2]
+    assert "unexpected argument" not in prompts[3]
+    assert "unexpected argument(s): timeout" in prompts[4]
