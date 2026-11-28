@@ -1,0 +1,1 @@
+{"origin": "agent", "test_ids": ["tests/delete/test_delete_sql.py::DeleteSQLTests::test_delete_all_no_subquery", "tests/delete/test_delete_sql.py::DeleteSQLTests::test_delete_filtered_keeps_where"]}
