@@ -291,4 +291,5 @@ Run 46125966623, 1 h 10 m, 13 units. **Dev S = 3 of 13** (astropy-14369, xarray-
 - **Prose next to a native tool call (client.py).** The provider returns prose in `content` plus a real `tool_calls` entry (`finish_reason: tool_calls`); we only used the call when content was empty, so the call was dropped and the agent got "no action block found". Now the call is the action unless the prose holds its own action block.
 - **File listing past the exec cap (swtbench.py D-M7-9).** `git ls-files` came back through exec, cut at 16 KB with the middle dropped, so on django the agent saw existing test files as missing and used `write_test` mode "new" (G0 "creates a file that already exists"). The listing now goes through a scratch file.
 - **Skip-marker rejection message (scope.py).** The rule stays; the message now says not to copy a skip decorator from a neighbouring test.
+Round 3 config: `dev-A-main` with `notes` marking round 3 (new hash), run id `dev-r3-A`. This is the last round the plan allows (at most 3); after it the model decision rule is applied and the freeze is planned.
 

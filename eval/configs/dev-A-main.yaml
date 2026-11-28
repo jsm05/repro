@@ -12,4 +12,4 @@ llm: live
 max_output_tokens: 8000
 gate_timeout_s: 300.0
 prompt_version: v1
-notes: "round 2: tool argument aliases and repo-relative paths (D-M7-7)"
+notes: "round 3: native tool call next to prose, full file listing, skip-marker message (D-M7-8)"
